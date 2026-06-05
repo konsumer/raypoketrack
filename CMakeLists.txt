@@ -104,7 +104,6 @@ if(EMSCRIPTEN)
         -sEXPORT_ES6=1
         -sMODULARIZE=1
         -sSINGLE_FILE=1
-        -sSINGLE_FILE_BINARY_ENCODE=1
         -sNO_EXIT_RUNTIME=1
         -sASSERTIONS=0
         -sWASM=1
