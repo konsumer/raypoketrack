@@ -36,7 +36,7 @@ static void drum_destroy(UnitState *s) { free(s); }
 
 static void drum_note_on(UnitState *s, uint8_t note, uint8_t vel, const uint8_t *p) {
   (void)note;
-  s->type = p[0] / 64;
+  s->type = p[0] < 4 ? p[0] : 3;
   float pitch_m = p2f(p[1], 0.3f, 2.5f);
   float decay_t = p2f(p[2], 0.02f, 0.9f);
   s->tone = p2f(p[3], 0.0f, 1.0f);
@@ -120,6 +120,8 @@ static void drum_render(UnitState *s, const uint8_t *p,
   }
 }
 
+static const char * const drum_type_names[] = {"KICK","SNARE","HIHAT","HIHAT-O"};
+
 const UnitDef unit_drum = {
     .id = "drum",
     .name = "DRUM",
@@ -127,6 +129,8 @@ const UnitDef unit_drum = {
     .num_params = 6,
     .param_names = {"TYPE", "PITCH", "DECAY", "TONE", "PUNCH", "VOL"},
     .param_defaults = {0, 128, 110, 80, 160, 200},
+    .param_enums = {drum_type_names},
+    .param_enum_count = {4},
     .create = drum_create,
     .destroy = drum_destroy,
     .note_on = drum_note_on,

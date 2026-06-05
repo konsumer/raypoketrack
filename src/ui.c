@@ -1,3 +1,4 @@
+#include "file_browser.h"
 #include "ui.h"
 
 #include <stdio.h>
@@ -97,6 +98,7 @@ void screen_menu_draw(UIState *ui);
 
 void ui_update(UIState *ui) {
   ui->blink++;
+  file_browser_tick();
 
   // START = play/stop; pattern screen loops current pattern only
   if (input_pressed(BTN_START) && !input_held(BTN_SELECT)) {
@@ -176,13 +178,10 @@ static void draw_status(UIState *ui) {
   }
   DrawText(left, 4, (STATUS_H - FONT_S) / 2, FONT_S, C_STATUS);
 
-  // Right: BPM only on MENU (editable there); elsewhere just play + edit tag
+  // Right: play state + edit indicator only — BPM visible as menu item on MENU screen
   const char *play = audio_is_playing(ui->engine) ? ">>" : "[]";
-  char right[32];
-  if (ui->screen == SCREEN_MENU)
-      snprintf(right, sizeof(right), "BPM:%d %s%s", ui->song->bpm, play, edit ? " [E]" : "");
-  else
-      snprintf(right, sizeof(right), "%s%s", play, edit ? " [E]" : "");
+  char right[16];
+  snprintf(right, sizeof(right), "%s", edit ? "E" : play);
   int rw = MeasureText(right, FONT_S);
   DrawText(right, WIN_W - rw - 4, (STATUS_H - FONT_S) / 2, FONT_S,
            edit ? C_EDIT_TAG : C_TEXT);

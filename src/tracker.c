@@ -112,6 +112,11 @@ void tracker_inst_set_slot(TrackerInstrument *inst, int slot, const char *unit_i
 void tracker_init(TrackerSong *song) {
   memset(song, 0, sizeof(TrackerSong));
   memset(song->patterns, TRACKER_EMPTY, sizeof(song->patterns));
+  // fx fields default to TRACKER_EMPTY (no param automation)
+  for (int pi = 0; pi < NUM_PATTERNS; pi++)
+    for (int si = 0; si < PATTERN_STEPS; si++)
+      for (int fi = 0; fi < FX_PER_STEP; fi++)
+        song->pattern_data[pi].steps[si].fx[fi] = TRACKER_EMPTY;
   for (int i = 0; i < NUM_INSTRUMENTS; i++)
     snprintf(song->instruments[i].name, 16, "INST%02X", i);
   song->bpm = 120;
@@ -128,18 +133,167 @@ void tracker_clear(TrackerSong *song) {
   strncpy(song->name, name, 32);
 }
 
+// Attachment section appended after TrackerSong struct:
+//   [4] magic 0x32545052 ('RPT2')
+//   [4] count
+//   For each:  [4] path_len, [path_len] path, [4] data_len, [data_len] data
+
+#define RPT2_MAGIC 0x32545052u
+
+#include <sys/stat.h>
+#include <stdlib.h>
+
+static void save_dir_of(const char *file_path, char *dir, int sz) {
+    strncpy(dir, file_path, sz - 1);
+    char *sep = strrchr(dir, '/');
+    if (!sep) sep = strrchr(dir, '\\');
+    if (sep) *(sep + 1) = '\0';
+    else { dir[0] = '.'; dir[1] = '/'; dir[2] = '\0'; }
+}
+
+static const char *basename_of(const char *p) {
+    const char *s = strrchr(p, '/');
+    if (!s) s = strrchr(p, '\\');
+    return s ? s + 1 : p;
+}
+
+static void ensure_parent_dir(const char *file_path) {
+    char dir[512];
+    save_dir_of(file_path, dir, sizeof(dir));
+    if (dir[0] && !(dir[0] == '.' && dir[1] == '/'))
+        mkdir(dir, 0755);
+}
+
 bool tracker_save(const TrackerSong *song, const char *path) {
-  return SaveFileData(path, (void *)song, (int)sizeof(TrackerSong));
+    char save_dir[512];
+    save_dir_of(path, save_dir, sizeof(save_dir));
+
+    // Collect file attachments from all chain slot data fields
+    typedef struct { char key[512]; unsigned char *data; uint32_t size; } Att;
+    Att  *atts = NULL;
+    int   natt = 0;
+
+    for (int i = 0; i < NUM_INSTRUMENTS; i++) {
+        for (int s = 0; s < CHAIN_MAX; s++) {
+            const char *d = song->instruments[i].chain[s].data;
+            if (!d[0]) continue;
+            // Handle CLAP tab-separated "path\tplugin_id"
+            char fpath[512];
+            strncpy(fpath, d, sizeof(fpath) - 1);
+            char *tab = strchr(fpath, '\t');
+            if (tab) *tab = '\0';
+            // Resolve relative paths
+            char resolved[512];
+            if (fpath[0] == '/' || fpath[0] == '\\' || fpath[1] == ':')
+                strncpy(resolved, fpath, sizeof(resolved) - 1);
+            else
+                snprintf(resolved, sizeof(resolved), "%s%s", save_dir, fpath);
+            // Skip if already added
+            bool dup = false;
+            for (int k = 0; k < natt; k++)
+                if (strcmp(atts[k].key, resolved) == 0) { dup = true; break; }
+            if (dup) continue;
+            // Try to load the file (skip if not found or too large)
+            int fsize = 0;
+            unsigned char *fdata = LoadFileData(resolved, &fsize);
+            if (!fdata || fsize <= 0 || fsize > 64 * 1024 * 1024) {
+                if (fdata) UnloadFileData(fdata);
+                continue;
+            }
+            atts = realloc(atts, (natt + 1) * sizeof(Att));
+            strncpy(atts[natt].key, resolved, sizeof(atts[natt].key) - 1);
+            atts[natt].data = fdata;
+            atts[natt].size = (uint32_t)fsize;
+            natt++;
+        }
+    }
+
+    // Build complete save buffer
+    size_t total = sizeof(TrackerSong);
+    if (natt > 0) {
+        total += 8; // magic + count
+        for (int k = 0; k < natt; k++)
+            total += 4 + strlen(atts[k].key) + 1 + 4 + atts[k].size;
+    }
+
+    unsigned char *buf = malloc(total);
+    if (!buf) {
+        for (int k = 0; k < natt; k++) UnloadFileData(atts[k].data);
+        free(atts);
+        return false;
+    }
+
+    memcpy(buf, song, sizeof(TrackerSong));
+
+    if (natt > 0) {
+        unsigned char *p = buf + sizeof(TrackerSong);
+        uint32_t magic = RPT2_MAGIC, cnt = (uint32_t)natt;
+        memcpy(p, &magic, 4); p += 4;
+        memcpy(p, &cnt,   4); p += 4;
+        for (int k = 0; k < natt; k++) {
+            uint32_t plen = (uint32_t)(strlen(atts[k].key) + 1);
+            memcpy(p, &plen, 4);              p += 4;
+            memcpy(p, atts[k].key, plen);     p += plen;
+            memcpy(p, &atts[k].size, 4);      p += 4;
+            memcpy(p, atts[k].data, atts[k].size); p += atts[k].size;
+            UnloadFileData(atts[k].data);
+        }
+    }
+    free(atts);
+
+    bool ok = SaveFileData(path, buf, (int)total);
+    free(buf);
+    return ok;
 }
 
 bool tracker_load(TrackerSong *song, const char *path) {
-  int size = 0;
-  unsigned char *data = LoadFileData(path, &size);
-  if (!data)
-    return false;
-  bool ok = ((size_t)size == sizeof(TrackerSong));
-  if (ok)
-    memcpy(song, data, sizeof(TrackerSong));
-  UnloadFileData(data);
-  return ok;
+    int size = 0;
+    unsigned char *data = LoadFileData(path, &size);
+    if (!data) return false;
+
+    bool ok = ((size_t)size >= sizeof(TrackerSong));
+    if (ok) memcpy(song, data, sizeof(TrackerSong));
+
+    // Read attachment section if present
+    if (ok && (size_t)size > sizeof(TrackerSong) + 8) {
+        unsigned char *p = data + sizeof(TrackerSong);
+        unsigned char *end = data + size;
+        uint32_t magic;
+        memcpy(&magic, p, 4);
+        if (magic == RPT2_MAGIC) {
+            p += 4;
+            uint32_t cnt; memcpy(&cnt, p, 4); p += 4;
+            char save_dir[512];
+            save_dir_of(path, save_dir, sizeof(save_dir));
+            for (uint32_t k = 0; k < cnt && p + 8 <= end; k++) {
+                uint32_t plen; memcpy(&plen, p, 4); p += 4;
+                if (p + plen + 4 > end) break;
+                char att_path[512];
+                strncpy(att_path, (char *)p, sizeof(att_path) - 1);
+                p += plen;
+                uint32_t dlen; memcpy(&dlen, p, 4); p += 4;
+                if (p + dlen > end) break;
+                // Write file to its stored path; fallback to save_dir/basename
+                ensure_parent_dir(att_path);
+                if (!SaveFileData(att_path, p, (int)dlen)) {
+                    char fallback[512];
+                    snprintf(fallback, sizeof(fallback), "%s%s",
+                             save_dir, basename_of(att_path));
+                    if (SaveFileData(fallback, p, (int)dlen)) {
+                        // Update matching slot->data paths
+                        for (int i = 0; i < NUM_INSTRUMENTS; i++)
+                            for (int s = 0; s < CHAIN_MAX; s++) {
+                                char *dd = song->instruments[i].chain[s].data;
+                                if (strcmp(dd, att_path) == 0)
+                                    strncpy(dd, fallback, 238);
+                            }
+                    }
+                }
+                p += dlen;
+            }
+        }
+    }
+
+    UnloadFileData(data);
+    return ok;
 }

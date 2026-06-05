@@ -1,11 +1,12 @@
 #include "audio.h"
+#include "file_browser.h"
 #include "ui.h"
 #include "units/unit_registry.h"
-#ifndef __EMSCRIPTEN__
-#include "tinyfiledialogs.h"
-#endif
 #include <stdio.h>
 #include <string.h>
+
+// Slot awaiting a file-browser result (-1 = none pending)
+static int g_file_slot = -1;
 
 #define PANEL_W (WIN_W / 2)
 #define INST_CONTENT_Y (STATUS_H + 2)
@@ -92,44 +93,24 @@ void screen_instrument_update(UIState *ui) {
     bool on_data = has_data && (ui->inst_row == data_row);
     ChainSlot *sl = &inst->chain[slot];
 
-    // A on FILE row: open native file dialog (desktop only)
+    // A on FILE row: open file browser
     if (on_data && input_pressed(BTN_A)) {
-#ifdef __EMSCRIPTEN__
-      (void)0;  // no native dialog on web — user sets path via text input
-#else
-      // Parse space-separated filter patterns into array for tinyfd
-      const char *fptrs[16];
-      char fbuf[128] = {0};
-      int fnc = 0;
-      if (def->file_filter) {
-        strncpy(fbuf, def->file_filter, sizeof(fbuf) - 1);
-        char *tok = fbuf;
-        while (*tok && fnc < 15) {
-          fptrs[fnc++] = tok;
-          tok = strchr(tok, ' ');
-          if (!tok)
-            break;
-          *tok++ = '\0';
-        }
-      }
+      g_file_slot = slot;
+      file_browser_open("Select file", def->file_filter ? def->file_filter : "");
+    }
 
-      const char *chosen = tinyfd_openFileDialog(
-          "Select file",
-          sl->data[0] ? sl->data : ui->engine->save_dir,
-          fnc, fptrs, NULL, 0);
-
-      if (chosen) {
-        // Store path relative to save_dir when possible
-        const char *rel = chosen;
-        const char *sd = ui->engine->save_dir;
-        size_t sdlen = strlen(sd);
-        if (sdlen > 0 && strncmp(chosen, sd, sdlen) == 0)
-          rel = chosen + sdlen;
-        strncpy(sl->data, rel, sizeof(sl->data) - 1);
-        sl->data[sizeof(sl->data) - 1] = '\0';
-        audio_rebuild_instrument(ui->engine, (uint8_t)ui->ctx_instrument);
-      }
-#endif
+    // Poll for file-browser result
+    const char *chosen = file_browser_poll();
+    if (chosen && g_file_slot == slot) {
+      g_file_slot = -1;
+      const char *rel = chosen;
+      const char *sd  = ui->engine->save_dir;
+      size_t sdlen = strlen(sd);
+      if (sdlen > 0 && strncmp(chosen, sd, sdlen) == 0)
+        rel = chosen + sdlen;
+      strncpy(sl->data, rel, sizeof(sl->data) - 1);
+      sl->data[sizeof(sl->data) - 1] = '\0';
+      audio_rebuild_instrument(ui->engine, (uint8_t)ui->ctx_instrument);
     }
 
     if (!edit) {
@@ -160,16 +141,18 @@ void screen_instrument_update(UIState *ui) {
     } else {
       if (!on_data && param < nparams) {
         uint8_t *v = &inst->chain[slot].params[param];
-        if (ui_repeat(BTN_UP))
-          (*v)++;
-        if (ui_repeat(BTN_DOWN))
-          (*v)--;
-        if (ui_repeat(BTN_RIGHT))
-          *v = (uint8_t)(*v + 16 > 255 ? 255 : *v + 16);
-        if (ui_repeat(BTN_LEFT))
-          *v = (uint8_t)(*v < 16 ? 0 : *v - 16);
-        if (input_pressed(BTN_B))
-          *v = def->param_defaults[param];
+        bool is_enum = def->param_enum_count[param] > 0 && def->param_enums[param];
+        if (is_enum) {
+          int cnt = def->param_enum_count[param];
+          if (ui_repeat(BTN_UP))   *v = (uint8_t)((*v + 1) % cnt);
+          if (ui_repeat(BTN_DOWN)) *v = (uint8_t)((*v + cnt - 1) % cnt);
+        } else {
+          if (ui_repeat(BTN_UP))    (*v)++;
+          if (ui_repeat(BTN_DOWN))  (*v)--;
+          if (ui_repeat(BTN_RIGHT)) *v = (uint8_t)(*v + 16 > 255 ? 255 : *v + 16);
+          if (ui_repeat(BTN_LEFT))  *v = (uint8_t)(*v < 16 ? 0 : *v - 16);
+        }
+        if (input_pressed(BTN_B))   *v = def->param_defaults[param];
       }
     }
   }
@@ -230,10 +213,17 @@ void screen_instrument_draw(UIState *ui) {
     bool cur = in_params && (param_row == ui->inst_row);
     DrawRectangle(PANEL_W, y, WIN_W - PANEL_W, CH_H, cur ? C_CURSOR : (pi % 2 == 0 ? C_BG_ALT : C_BG));
     DrawText(def->param_names[pi], PANEL_W + 4, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_TITLE : C_TEXT);
-    DrawText(TextFormat("%02X", sl->params[pi]), PANEL_W + 50, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_NOTE : C_VEL);
-    float frac = sl->params[pi] / 255.0f;
-    DrawRectangle(bar_x, y + 3, bar_w, CH_H - 6, C_DIM);
-    DrawRectangle(bar_x, y + 3, (int)(frac * bar_w), CH_H - 6, cur ? C_NOTE : C_HEADER);
+
+    bool is_enum = def->param_enum_count[pi] > 0 && def->param_enums[pi];
+    if (is_enum) {
+      uint8_t idx = sl->params[pi] % def->param_enum_count[pi];
+      DrawText(def->param_enums[pi][idx], PANEL_W + 50, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_NOTE : C_VEL);
+    } else {
+      DrawText(TextFormat("%02X", sl->params[pi]), PANEL_W + 50, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_NOTE : C_VEL);
+      float frac = sl->params[pi] / 255.0f;
+      DrawRectangle(bar_x, y + 3, bar_w, CH_H - 6, C_DIM);
+      DrawRectangle(bar_x, y + 3, (int)(frac * bar_w), CH_H - 6, cur ? C_NOTE : C_HEADER);
+    }
   }
 
   // FILE row for units that load a file

@@ -6,7 +6,7 @@ It uses [CLAP](https://github.com/free-audio/clap) for sound-generation and effe
 
 You should be able to track quickly with a joystick, or keys:
 
-![keys](./keys.png)
+![keys](./keys.svg)
 
 | Input | Screen | Purpose |
 |---|---|---|

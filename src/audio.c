@@ -217,6 +217,25 @@ static void fire_step(AudioEngine *eng, int ch, PatternStep *step) {
   uint8_t inst_idx = step->instrument < NUM_INSTRUMENTS ? step->instrument : 0;
   ensure_chan_states(eng, ch, inst_idx);
 
+  // Apply per-step param overrides.
+  // fx[i] is a global param index spanning all chain slots in order:
+  // slot 0 params 0..(n0-1), slot 1 params n0..(n0+n1-1), etc.
+  TrackerInstrument *inst = &eng->song->instruments[inst_idx];
+  for (int fi = 0; fi < FX_PER_STEP; fi++) {
+    if (step->fx[fi] == TRACKER_EMPTY) continue;
+    int remaining = (int)step->fx[fi];
+    for (int s = 0; s < CHAIN_MAX; s++) {
+      if (!inst->chain[s].unit_id[0]) continue;
+      const UnitDef *def = unit_find(inst->chain[s].unit_id);
+      if (!def) continue;
+      if (remaining < def->num_params) {
+        inst->chain[s].params[remaining] = step->fxv[fi];
+        break;
+      }
+      remaining -= def->num_params;
+    }
+  }
+
   if (eng->active_note[ch])
     chan_note_off(eng, ch, eng->active_note[ch]);
   eng->active_note[ch] = step->note;

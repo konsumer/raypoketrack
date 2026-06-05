@@ -135,7 +135,7 @@ static void osc_render(UnitState *s, const uint8_t *p,
   (void)in_r;
   if (s->sample_rate <= 0)
     return;
-  int wave = (p[0] * 5) / 256;
+  int wave = p[0] < 5 ? p[0] : 4;
   float atk = p2f(p[1], 0.001f, 2.0f);
   float dcy = p2f(p[2], 0.001f, 2.0f);
   float sus = p2f(p[3], 0.0f, 1.0f);
@@ -162,13 +162,17 @@ static void osc_render(UnitState *s, const uint8_t *p,
   }
 }
 
+static const char * const osc_wave_names[] = {"SINE","SQR","SAW","TRI","NOISE"};
+
 const UnitDef unit_osc = {
     .id = "osc",
     .name = "OSC",
     .is_source = true,
     .num_params = 8,
     .param_names = {"WAVE", "ATK", "DCY", "SUS", "REL", "DET", "PW", "VOL"},
-    .param_defaults = {102, 2, 25, 178, 12, 128, 128, 200},
+    .param_defaults = {2, 2, 25, 178, 12, 128, 128, 200},
+    .param_enums = {osc_wave_names},
+    .param_enum_count = {5},
     .create = osc_create,
     .destroy = osc_destroy,
     .note_on = osc_note_on,

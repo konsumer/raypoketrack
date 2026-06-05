@@ -57,9 +57,9 @@ set(SOURCES
     src/main.c
     src/tracker.c
     src/input.c
-    src/clap_host.c
     src/audio.c
     src/ui.c
+    src/file_browser.c
     src/screen_song.c
     src/screen_pattern.c
     src/screen_instrument.c
@@ -67,7 +67,6 @@ set(SOURCES
     src/units/osc.c
     src/units/drum.c
     src/units/sf2.c
-    src/units/clap_unit.c
     src/units/delay.c
     src/units/dist.c
     src/units/reverb.c
@@ -78,8 +77,9 @@ set(SOURCES
     src/units/unit_registry.c
 )
 
-# tinyfiledialogs — desktop only (no native dialogs in browser)
+# CLAP and tinyfiledialogs — desktop only
 if(NOT EMSCRIPTEN)
+    list(APPEND SOURCES src/clap_host.c src/units/clap_unit.c)
     list(APPEND SOURCES ${TFD_DIR}/tinyfiledialogs.c)
 endif()
 
@@ -87,11 +87,13 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${raylib_SOURCE_DIR}/src
-    ${clap_SOURCE_DIR}/include
     ${TSF_INCLUDE_DIR}
     ${TFD_DIR}
     src
 )
+if(NOT EMSCRIPTEN)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${clap_SOURCE_DIR}/include)
+endif()
 
 if(EMSCRIPTEN)
     set(CMAKE_EXECUTABLE_SUFFIX ".mjs")

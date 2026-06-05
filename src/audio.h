@@ -2,7 +2,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifndef __EMSCRIPTEN__
 #include "clap_host.h"
+#endif
 #include "tracker.h"
 #include "units/unit_registry.h"
 

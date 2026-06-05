@@ -18,7 +18,11 @@ typedef struct {
   bool is_source;           // true=generates audio, false=processes audio
   int num_params;
   const char *param_names[UNIT_MAX_PARAMS];
-  uint8_t param_defaults[UNIT_MAX_PARAMS];
+  uint8_t     param_defaults[UNIT_MAX_PARAMS];
+  // Optional enum labels. NULL = continuous 0-FF slider.
+  // When set, param value is a direct index 0..(count-1).
+  const char * const *param_enums[UNIT_MAX_PARAMS];
+  uint8_t             param_enum_count[UNIT_MAX_PARAMS];
 
   UnitState *(*create)(float sample_rate);
   void (*destroy)(UnitState *s);

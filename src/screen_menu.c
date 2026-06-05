@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "file_browser.h"
 #include "tracker.h"
 #include "ui.h"
+
+typedef enum { MENU_FB_NONE, MENU_FB_LOAD, MENU_FB_SAVE } MenuFileBrowserMode;
+static MenuFileBrowserMode g_fb_mode = MENU_FB_NONE;
 
 #define MENU_CONTENT_Y (STATUS_H + 2)
 #define SONG_FILE "song.rpt"
@@ -34,6 +38,33 @@ void screen_menu_update(UIState *ui) {
 
   if (status_timer > 0)
     status_timer--;
+
+  // Poll file browser result
+  const char *fb_path = file_browser_poll();
+  if (fb_path) {
+    if (g_fb_mode == MENU_FB_LOAD) {
+      g_fb_mode = MENU_FB_NONE;
+      audio_stop(ui->engine);
+      TrackerSong tmp;
+      if (tracker_load(&tmp, fb_path)) {
+        *ui->song = tmp;
+        audio_set_save_dir(ui->engine, fb_path);
+        snprintf(status_msg, sizeof(status_msg), "LOADED");
+      } else {
+        snprintf(status_msg, sizeof(status_msg), "LOAD FAILED");
+      }
+      status_timer = 180;
+    } else if (g_fb_mode == MENU_FB_SAVE) {
+      g_fb_mode = MENU_FB_NONE;
+      bool ok = tracker_save(ui->song, fb_path);
+      if (ok) {
+        audio_set_save_dir(ui->engine, fb_path);
+        file_browser_download(fb_path, "song.rpt");
+      }
+      snprintf(status_msg, sizeof(status_msg), ok ? "SAVED" : "SAVE FAILED");
+      status_timer = 180;
+    }
+  }
 
   if (!edit) {
     if (ui_repeat(BTN_UP) && ui->menu_row > 0)
@@ -69,27 +100,15 @@ void screen_menu_update(UIState *ui) {
 
       case MENU_SAVE:
         if (input_pressed(BTN_A)) {
-          bool ok = tracker_save(ui->song, SONG_FILE);
-          if (ok)
-            audio_set_save_dir(ui->engine, SONG_FILE);
-          snprintf(status_msg, sizeof(status_msg),
-                   ok ? "SAVED: %s" : "SAVE FAILED: %s", SONG_FILE);
-          status_timer = 180;
+          g_fb_mode = MENU_FB_SAVE;
+          file_browser_save_as("Save song", SONG_FILE);
         }
         break;
 
       case MENU_LOAD:
         if (input_pressed(BTN_A)) {
-          audio_stop(ui->engine);
-          TrackerSong tmp;
-          if (tracker_load(&tmp, SONG_FILE)) {
-            *ui->song = tmp;
-            audio_set_save_dir(ui->engine, SONG_FILE);
-            snprintf(status_msg, sizeof(status_msg), "LOADED: %s", SONG_FILE);
-          } else {
-            snprintf(status_msg, sizeof(status_msg), "LOAD FAILED: %s", SONG_FILE);
-          }
-          status_timer = 180;
+          g_fb_mode = MENU_FB_LOAD;
+          file_browser_open("Load song", "*.rpt");
         }
         break;
 

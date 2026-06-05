@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "ui.h"
+#include "units/unit_registry.h"
 
 // Column layout
 #define PX_ROW 0
@@ -32,6 +33,18 @@ static int col_w(int c) {
 
 static uint8_t clamp8(int v) { return v < 0 ? 0 : v > 255 ? 255
                                                           : (uint8_t)v; }
+
+// Total params across all filled chain slots (global index upper bound)
+static int inst_total_params(TrackerSong *song, uint8_t inst_idx) {
+  TrackerInstrument *inst = &song->instruments[inst_idx];
+  int total = 0;
+  for (int s = 0; s < CHAIN_MAX; s++) {
+    if (!inst->chain[s].unit_id[0]) continue;
+    const UnitDef *def = unit_find(inst->chain[s].unit_id);
+    if (def) total += def->num_params;
+  }
+  return total > 0 ? total : 1;
+}
 
 static void preview(UIState *ui, uint8_t note) {
   audio_preview_kill(ui->engine);
@@ -81,19 +94,19 @@ void screen_pattern_update(UIState *ui) {
           step->note = NOTE_EMPTY;
           break;
         case 1:
-          step->velocity = 100;
+          step->velocity = 0xFF;
           break;
         case 2:
           step->instrument = 0;
           break;
         case 3:
-          step->fx[0] = FX_NONE;
+          step->fx[0] = TRACKER_EMPTY;
           break;
         case 4:
           step->fxv[0] = 0;
           break;
         case 5:
-          step->fx[1] = FX_NONE;
+          step->fx[1] = TRACKER_EMPTY;
           break;
         case 6:
           step->fxv[1] = 0;
@@ -114,6 +127,7 @@ void screen_pattern_update(UIState *ui) {
         if (ui_repeat(BTN_UP)) {
           if (n == NOTE_EMPTY || n == NOTE_OFF) {
             step->note = scale_next_note(59, +1, si, sr);
+            if (!step->velocity) step->velocity = 0xFF;
           } else {
             step->note = scale_next_note(n, +1, si, sr);
           }
@@ -122,6 +136,7 @@ void screen_pattern_update(UIState *ui) {
         if (ui_repeat(BTN_DOWN)) {
           if (n == NOTE_EMPTY || n == NOTE_OFF) {
             step->note = scale_next_note(61, -1, si, sr);
+            if (!step->velocity) step->velocity = 0xFF;
           } else {
             step->note = scale_next_note(n, -1, si, sr);
           }
@@ -150,7 +165,7 @@ void screen_pattern_update(UIState *ui) {
         if (ui_repeat(BTN_LEFT))
           step->velocity = clamp8((int)step->velocity - 16);
         if (input_pressed(BTN_B))
-          step->velocity = 100;
+          step->velocity = 0xFF;
         break;
       case 2:  // instrument
         if (ui_repeat(BTN_UP) && step->instrument < NUM_INSTRUMENTS - 1)
@@ -161,45 +176,35 @@ void screen_pattern_update(UIState *ui) {
           step->instrument = 0;
         ui->ctx_instrument = step->instrument;
         break;
-      case 3:
-        if (ui_repeat(BTN_UP))
-          step->fx[0] = (step->fx[0] + 1) % FX_COUNT;
-        if (ui_repeat(BTN_DOWN))
-          step->fx[0] = (step->fx[0] + FX_COUNT - 1) % FX_COUNT;
-        if (input_pressed(BTN_B))
-          step->fx[0] = FX_NONE;
-        break;
+      case 3: {  // global param index across all chain slots, TRACKER_EMPTY=none
+          uint8_t *f = &step->fx[0];
+          int maxp = inst_total_params(ui->song, step->instrument) - 1;
+          if (ui_repeat(BTN_UP))   *f = (*f == TRACKER_EMPTY) ? 0 : (*f < (uint8_t)maxp ? *f + 1 : TRACKER_EMPTY);
+          if (ui_repeat(BTN_DOWN)) *f = (*f == TRACKER_EMPTY || *f == 0) ? TRACKER_EMPTY : *f - 1;
+          if (input_pressed(BTN_B)) *f = TRACKER_EMPTY;
+          break;
+        }
       case 4:
-        if (ui_repeat(BTN_UP))
-          step->fxv[0]++;
-        if (ui_repeat(BTN_DOWN))
-          step->fxv[0]--;
-        if (ui_repeat(BTN_RIGHT))
-          step->fxv[0] = clamp8(step->fxv[0] + 16);
-        if (ui_repeat(BTN_LEFT))
-          step->fxv[0] = clamp8((int)step->fxv[0] - 16);
-        if (input_pressed(BTN_B))
-          step->fxv[0] = 0;
+        if (ui_repeat(BTN_UP))    step->fxv[0]++;
+        if (ui_repeat(BTN_DOWN))  step->fxv[0]--;
+        if (ui_repeat(BTN_RIGHT)) step->fxv[0] = clamp8(step->fxv[0] + 16);
+        if (ui_repeat(BTN_LEFT))  step->fxv[0] = clamp8((int)step->fxv[0] - 16);
+        if (input_pressed(BTN_B)) step->fxv[0] = 0;
         break;
-      case 5:
-        if (ui_repeat(BTN_UP))
-          step->fx[1] = (step->fx[1] + 1) % FX_COUNT;
-        if (ui_repeat(BTN_DOWN))
-          step->fx[1] = (step->fx[1] + FX_COUNT - 1) % FX_COUNT;
-        if (input_pressed(BTN_B))
-          step->fx[1] = FX_NONE;
-        break;
+      case 5: {  // global param index across all chain slots, TRACKER_EMPTY=none
+          uint8_t *f = &step->fx[1];
+          int maxp = inst_total_params(ui->song, step->instrument) - 1;
+          if (ui_repeat(BTN_UP))   *f = (*f == TRACKER_EMPTY) ? 0 : (*f < (uint8_t)maxp ? *f + 1 : TRACKER_EMPTY);
+          if (ui_repeat(BTN_DOWN)) *f = (*f == TRACKER_EMPTY || *f == 0) ? TRACKER_EMPTY : *f - 1;
+          if (input_pressed(BTN_B)) *f = TRACKER_EMPTY;
+          break;
+        }
       case 6:
-        if (ui_repeat(BTN_UP))
-          step->fxv[1]++;
-        if (ui_repeat(BTN_DOWN))
-          step->fxv[1]--;
-        if (ui_repeat(BTN_RIGHT))
-          step->fxv[1] = clamp8(step->fxv[1] + 16);
-        if (ui_repeat(BTN_LEFT))
-          step->fxv[1] = clamp8((int)step->fxv[1] - 16);
-        if (input_pressed(BTN_B))
-          step->fxv[1] = 0;
+        if (ui_repeat(BTN_UP))    step->fxv[1]++;
+        if (ui_repeat(BTN_DOWN))  step->fxv[1]--;
+        if (ui_repeat(BTN_RIGHT)) step->fxv[1] = clamp8(step->fxv[1] + 16);
+        if (ui_repeat(BTN_LEFT))  step->fxv[1] = clamp8((int)step->fxv[1] - 16);
+        if (input_pressed(BTN_B)) step->fxv[1] = 0;
         break;
     }
   }
@@ -214,9 +219,9 @@ void screen_pattern_draw(UIState *ui) {
   DrawText("NOTE", PX_NOTE + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
   DrawText("VEL", PX_VEL + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
   DrawText("INS", PX_INST + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
-  DrawText("F1", PX_F1T + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
+  DrawText("P1", PX_F1T + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
   DrawText("V", PX_F1V + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
-  DrawText("F2", PX_F2T + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
+  DrawText("P2", PX_F2T + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
   DrawText("V", PX_F2V + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
   DrawLine(0, hy + CH_H, WIN_W, hy + CH_H, C_SEP);
 
@@ -270,11 +275,11 @@ void screen_pattern_draw(UIState *ui) {
           fc = C_INST;
           break;
         case 3:
-          txt = fx_cmd_str(s->fx[0]);
-          fc = s->fx[0] == FX_NONE ? (cur_cell ? C_TEXT : C_DIM) : C_FX;
+          if (s->fx[0] == TRACKER_EMPTY) { txt = "--"; fc = cur_cell ? C_TEXT : C_DIM; }
+          else { snprintf(tmp, 8, "%d", s->fx[0]); txt = tmp; fc = C_FX; }
           break;
         case 4:
-          if (s->fx[0] == FX_NONE) {
+          if (s->fx[0] == TRACKER_EMPTY) {
             txt = "--";
             fc = cur_cell ? C_TEXT : C_DIM;
           } else {
@@ -284,11 +289,11 @@ void screen_pattern_draw(UIState *ui) {
           }
           break;
         case 5:
-          txt = fx_cmd_str(s->fx[1]);
-          fc = s->fx[1] == FX_NONE ? (cur_cell ? C_TEXT : C_DIM) : C_FX;
+          if (s->fx[1] == TRACKER_EMPTY) { txt = "--"; fc = cur_cell ? C_TEXT : C_DIM; }
+          else { snprintf(tmp, 8, "%d", s->fx[1]); txt = tmp; fc = C_FX; }
           break;
         case 6:
-          if (s->fx[1] == FX_NONE) {
+          if (s->fx[1] == TRACKER_EMPTY) {
             txt = "--";
             fc = cur_cell ? C_TEXT : C_DIM;
           } else {
