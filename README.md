@@ -8,33 +8,51 @@ You should be able to track quickly with a joystick, or keys:
 
 ![keys](./keys.png)
 
-```
-┌───────────────────────┬────────────────┬─────────────────────────┐
-│   In phrase screen    │      Keys      │         Action          │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ Navigate              │ Arrows         │ Move cursor row/col     │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ A + Up/Down           │ X + Arrows     │ Change note semitone    │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ A + Left/Right        │ X + ←/→        │ Octave down/up          │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ A + B                 │ X + Z          │ Place NOTE_OFF          │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ SELECT + A + B        │ RShift + X + Z │ Clear note (empty)      │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ A + Up/Down on VEL    │ X + ↑↓         │ Change velocity ±1      │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ A + Left/Right on VEL │ X + ←/→        │ Change velocity ±16     │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ A + Up/Down on INS    │ X + ↑↓         │ Change instrument       │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ SELECT + A on INS col │ RShift + X     │ Enter instrument editor │
-├───────────────────────┼────────────────┼─────────────────────────┤
-│ B                     │ Z              │ Back to chain           │
-└───────────────────────┴────────────────┴─────────────────────────┘
-```
+| Input | Screen | Purpose |
+|---|---|---|
+| SELECT + ←/↑/↓/→ | Any | Switch to Song / Pattern / Instrument / Menu screen |
+| START | Any | Play/stop |
+| START | Pattern | Loop current pattern only (not full song) |
+| ↑/↓ | Song | Move cursor row |
+| ←/→ | Song | Scroll visible channels |
+| A + ↑/↓ | Song | Set pattern number in focused cell |
+| B | Song | Clear cell |
+| ↑/↓ | Pattern | Move cursor row |
+| ←/→ | Pattern | Move cursor column (note → vel → inst → fx…) |
+| A + ↑/↓ | Pattern, note col | Step note up/down by current scale |
+| A + ←/→ | Pattern, note col | Octave up/down |
+| A + B | Pattern, note col | Insert NOTE-OFF |
+| B | Pattern, note col | Clear note |
+| A + ↑/↓ | Pattern, velocity col | Change velocity ±1 |
+| A + ←/→ | Pattern, velocity col | Change velocity ±16 |
+| B | Pattern, velocity col | Reset velocity to 100 |
+| A + ↑/↓ | Pattern, instrument col | Change instrument number |
+| B | Pattern, instrument col | Reset instrument to 0 |
+| A + ↑/↓ | Pattern, FX col | Cycle FX type |
+| A + ↑/↓ | Pattern, FX value col | Change FX value ±1 |
+| A + ←/→ | Pattern, FX value col | Change FX value ±16 |
+| B | Pattern, FX col | Clear FX |
+| L / R | Instrument | Previous / next instrument |
+| ↑/↓ | Instrument, slot panel | Navigate chain slots |
+| → | Instrument, slot panel | Enter param panel for selected slot |
+| A + ↑/↓ | Instrument, slot panel | Cycle unit type in slot |
+| A + B | Instrument, slot panel | Toggle slot enabled/disabled |
+| B | Instrument, slot panel | Clear slot |
+| ↑/↓ | Instrument, param panel | Navigate params |
+| ← | Instrument, param panel | Back to slot panel |
+| A + ↑/↓ | Instrument, param panel | Change param value ±1 |
+| A + ←/→ | Instrument, param panel | Change param value ±16 |
+| B | Instrument, param panel | Reset param to default |
+| A (Enter/Return) | Instrument, FILE row | Open file picker |
+| B | Instrument, FILE row | Clear file path |
+| ↑/↓ | Menu | Navigate items |
+| A + ↑/↓ | Menu, BPM | Change BPM ±1 |
+| A + ←/→ | Menu, BPM | Change BPM ±10 |
+| A + ↑/↓ | Menu, KEY | Change scale root note |
+| A + ↑/↓ | Menu, SCALE | Cycle scale (chromatic, major, minor, Persian…) |
+| A + A | Menu, SAVE/LOAD/NEW | Confirm action |
 
-It may seem a bit inscruitable at first, but input is meant to be consistant, and fast with a joystuck, so once you get the hang of it, it should work well.
+It may seem a bit inscrutable at first, but input is meant to be consistent and fast with a joystick, so once you get the hang of it, it should work well. A is "cnage this value" and B is "delete/reset/cancel", SELECT+arrow is "change screen" and START is "play song/pattern".
 
 ## development
 
