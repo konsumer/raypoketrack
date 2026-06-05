@@ -2,9 +2,16 @@
 	<head>
 		<title>raypoketrack</title>
 		<style>
-			*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-			html, body { width: 100%; height: 100%; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-			canvas { aspect-ratio: 480/320 !important; width: min(100vw, calc(100vh * 480 / 320)) !important; height: auto !important; }
+			* { margin: 0; padding: 0; }
+			html, body { background: #000; overflow: hidden; }
+			canvas {
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				width: min(100vw, calc(100vh * 480 / 320)) !important;
+				height: min(100vh, calc(100vw * 320 / 480)) !important;
+			}
 		</style>
 	</head>
 	<body>

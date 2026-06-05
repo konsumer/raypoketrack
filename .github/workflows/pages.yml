@@ -23,13 +23,10 @@ jobs:
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v14
         with:
-          version: 3.1.64
+          version: 4.0.14
 
       - name: Configure (web)
-        run: |
-          emcmake cmake -B build-web -S . \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DPLATFORM=Web
+        run: emcmake cmake -B build-web -DCMAKE_BUILD_TYPE=Release -DPLATFORM=Web
 
       - name: Build
         run: cmake --build build-web --parallel
