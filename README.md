@@ -17,6 +17,7 @@ You should be able to track quickly with a joystick, or keys:
 | ←/→ | Song | Scroll visible channels |
 | A + ↑/↓ | Song | Set pattern number in focused cell |
 | B | Song | Clear cell |
+| L / R | Pattern | Previous / next pattern |
 | ↑/↓ | Pattern | Move cursor row |
 | ←/→ | Pattern | Move cursor column (note → vel → inst → fx…) |
 | A + ↑/↓ | Pattern, note col | Step note up/down by current scale |

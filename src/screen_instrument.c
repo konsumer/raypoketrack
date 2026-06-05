@@ -8,8 +8,7 @@
 #include <string.h>
 
 #define PANEL_W (WIN_W / 2)
-#define INST_HEADER_Y (STATUS_H + 1)
-#define INST_CONTENT_Y (INST_HEADER_Y + CH_H + 1)
+#define INST_CONTENT_Y (STATUS_H + 2)
 
 // inst_row 0-7 = slot list, 8+ = param/data editing
 // DATA row index = CHAIN_MAX + def->num_params  (one past last param)
@@ -183,14 +182,6 @@ void screen_instrument_draw(UIState *ui) {
   TrackerInstrument *inst = &ui->song->instruments[ui->ctx_instrument];
   bool in_params = (ui->inst_row >= CHAIN_MAX);
   int cur_slot = in_params ? ui->ctx_instrument_slot : ui->inst_row;
-
-  // Header
-  int hy = INST_HEADER_Y;
-  DrawRectangle(0, hy, WIN_W, CH_H, C_BG_ALT);
-  DrawText(TextFormat("INST %02X  %s    [L/R=prev/next]",
-                      ui->ctx_instrument, inst->name),
-           4, hy + (CH_H - FONT_S) / 2, FONT_S, C_STATUS);
-  DrawLine(0, hy + CH_H, WIN_W, hy + CH_H, C_SEP);
 
   // Left panel: chain slots
   for (int s = 0; s < CHAIN_MAX; s++) {

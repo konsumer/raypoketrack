@@ -4,7 +4,7 @@
 #include "tracker.h"
 #include "ui.h"
 
-#define MENU_CONTENT_Y (STATUS_H + CH_H + 2)
+#define MENU_CONTENT_Y (STATUS_H + 2)
 #define SONG_FILE "song.rpt"
 
 typedef enum {
@@ -110,12 +110,6 @@ void screen_menu_update(UIState *ui) {
 }
 
 void screen_menu_draw(UIState *ui) {
-  int hy = STATUS_H + 1;
-  DrawRectangle(0, hy, WIN_W, CH_H, C_BG_ALT);
-  DrawText("MENU", 4, hy + (CH_H - FONT_S) / 2, FONT_S, C_STATUS);
-  DrawText(TextFormat("FILE: %s", SONG_FILE), 60, hy + (CH_H - FONT_S) / 2, FONT_S, C_DIM);
-  DrawLine(0, hy + CH_H, WIN_W, hy + CH_H, C_SEP);
-
   for (int i = 0; i < MENU_COUNT; i++) {
     int y = MENU_CONTENT_Y + i * (CH_H + 2);
     bool cur = (i == ui->menu_row);
@@ -138,6 +132,9 @@ void screen_menu_draw(UIState *ui) {
         break;
       case MENU_SAVE:
       case MENU_LOAD:
+        DrawText(SONG_FILE, 100, y + (CH_H - FONT_S) / 2, FONT_S - 1, cur ? C_DIM : C_DIM);
+        if (cur) DrawText("[holdA+A]", WIN_W - 64, y + (CH_H - FONT_S) / 2, FONT_S - 1, C_DIM);
+        break;
       case MENU_NEW:
         DrawText(cur ? "[holdA+A=confirm]" : "", 100, y + (CH_H - FONT_S) / 2, FONT_S - 1, C_DIM);
         break;

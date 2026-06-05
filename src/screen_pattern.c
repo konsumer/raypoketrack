@@ -53,6 +53,16 @@ void screen_pattern_update(UIState *ui) {
   if (input_released(BTN_A))
     audio_preview_kill(ui->engine);
 
+  // L/R shoulder: cycle pattern
+  if (!input_held(BTN_A)) {
+    if (ui_repeat(BTN_R) && ui->ctx_pattern < NUM_PATTERNS - 1)
+      ui->ctx_pattern++;
+    if (ui_repeat(BTN_L) && ui->ctx_pattern > 0)
+      ui->ctx_pattern--;
+    pat  = &ui->song->pattern_data[ui->ctx_pattern];
+    step = &pat->steps[ui->pattern_row];
+  }
+
   if (!edit) {
     int old_row = ui->pattern_row;
     if (ui_repeat(BTN_UP) && ui->pattern_row > 0)
@@ -201,8 +211,6 @@ void screen_pattern_draw(UIState *ui) {
   // Header
   int hy = STATUS_H + 1;
   DrawRectangle(0, hy, WIN_W, CH_H, C_BG_ALT);
-  DrawText(TextFormat("PATTERN %02X  CH%d", ui->ctx_pattern, ui->ctx_channel + 1),
-           4, hy + (CH_H - FONT_S) / 2, FONT_S, CH_COLORS[ui->ctx_channel]);
   DrawText("NOTE", PX_NOTE + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
   DrawText("VEL", PX_VEL + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);
   DrawText("INS", PX_INST + 2, hy + (CH_H - FONT_S) / 2, FONT_S, C_HEADER);

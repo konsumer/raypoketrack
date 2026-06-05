@@ -164,29 +164,25 @@ static void draw_status(UIState *ui) {
   // Top bar
   DrawRectangle(0, 0, WIN_W, STATUS_H, bar);
 
-  // Screen tabs: SEL+L/U/D/R
-  // Show abbreviated tabs so user knows the shortcuts
-  static const struct {
-    const char *label;
-    int x;
-  } tabs[] = {
-      {"[SEL+L]SONG", 4},
-      {"[SEL+U]PTRN", 80},
-      {"[SEL+D]INST", 158},
-      {"[SEL+R]MENU", 236},
-  };
-  for (int i = 0; i < 4; i++) {
-    Color c = ((int)ui->screen == i) ? C_STATUS : C_HEADER;
-    DrawText(tabs[i].label, tabs[i].x, (STATUS_H - FONT_S) / 2, FONT_S - 1, c);
+  // Left: screen name; pattern screen includes pattern number
+  char left[32];
+  if (ui->screen == SCREEN_PATTERN)
+      snprintf(left, sizeof(left), "PATTERN %02X", ui->ctx_pattern);
+  else if (ui->screen == SCREEN_INSTRUMENT)
+      snprintf(left, sizeof(left), "INSTRUMENT %02X", ui->ctx_instrument);
+  else {
+      static const char *names[] = {"SONG", NULL, NULL, "MENU"};
+      snprintf(left, sizeof(left), "%s", names[ui->screen]);
   }
+  DrawText(left, 4, (STATUS_H - FONT_S) / 2, FONT_S, C_STATUS);
 
-  // Right: context + BPM + play
+  // Right: BPM only on MENU (editable there); elsewhere just play + edit tag
   const char *play = audio_is_playing(ui->engine) ? ">>" : "[]";
-  Color pcol = audio_is_playing(ui->engine) ? C_PLAY : C_TEXT;
-  char right[48];
-  snprintf(right, sizeof(right), "CH%d  PT%02X  BPM:%d %s %s",
-           ui->ctx_channel + 1, ui->ctx_pattern, ui->song->bpm, play,
-           edit ? "[EDIT]" : "");
+  char right[32];
+  if (ui->screen == SCREEN_MENU)
+      snprintf(right, sizeof(right), "BPM:%d %s%s", ui->song->bpm, play, edit ? " [E]" : "");
+  else
+      snprintf(right, sizeof(right), "%s%s", play, edit ? " [E]" : "");
   int rw = MeasureText(right, FONT_S);
   DrawText(right, WIN_W - rw - 4, (STATUS_H - FONT_S) / 2, FONT_S,
            edit ? C_EDIT_TAG : C_TEXT);
