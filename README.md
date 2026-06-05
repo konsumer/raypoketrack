@@ -52,7 +52,7 @@ You should be able to track quickly with a joystick, or keys:
 | A + ↑/↓ | Menu, SCALE | Cycle scale (chromatic, major, minor, Persian…) |
 | A + A | Menu, SAVE/LOAD/NEW | Confirm action |
 
-It may seem a bit inscrutable at first, but input is meant to be consistent and fast with a joystick, so once you get the hang of it, it should work well. A is "cnage this value" and B is "delete/reset/cancel", SELECT+arrow is "change screen" and START is "play song/pattern".
+It may seem a bit inscrutable at first, but input is meant to be consistent and fast with a joystick, so once you get the hang of it, it should work well. A is "change this value" and B is "delete/reset/cancel", SELECT+arrow is "change screen" and START is "play song/pattern".
 
 ## development
 
