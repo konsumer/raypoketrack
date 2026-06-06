@@ -4,6 +4,9 @@
 // P2 STAGES: 00=2       FF=8 (allpass stages, mapped to 2/4/6/8)
 // P3 FDBK:   00=none    FF=strong resonance
 // P4 MIX:    00=dry     FF=wet
+#ifdef _MSC_VER
+#define _USE_MATH_DEFINES
+#endif
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>

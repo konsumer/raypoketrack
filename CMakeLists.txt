@@ -12,6 +12,11 @@ endif()
 
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+if(MSVC)
+  add_compile_options(/std:c11 /D_USE_MATH_DEFINES)
+endif()
 
 include(FetchContent)
 
@@ -116,5 +121,12 @@ else()
     target_link_libraries(${PROJECT_NAME} PRIVATE raylib m)
     if(APPLE)
         target_link_libraries(${PROJECT_NAME} PRIVATE "-framework Cocoa")
+        set_target_properties(${PROJECT_NAME} PROPERTIES
+            MACOSX_BUNDLE TRUE
+            MACOSX_BUNDLE_BUNDLE_NAME "raypoketrack"
+            MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+            MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+            MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/Info.plist.in"
+        )
     endif()
 endif()

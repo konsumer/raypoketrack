@@ -59,16 +59,16 @@ static void host_request_process(const clap_host_t *host) { (void)host; }
 static void host_request_callback(const clap_host_t *host) { (void)host; }
 
 static clap_host_t s_host = {
-    .clap_version = CLAP_VERSION_INIT,
-    .host_data = NULL,
-    .name = "raypoketrack",
-    .vendor = "raypoketrack",
-    .url = "",
-    .version = "0.1.0",
-    .get_extension = host_get_extension,
-    .request_restart = host_request_restart,
-    .request_process = host_request_process,
-    .request_callback = host_request_callback,
+    CLAP_VERSION_INIT,
+    NULL,
+    "raypoketrack",
+    "raypoketrack",
+    "",
+    "0.1.0",
+    host_get_extension,
+    host_request_restart,
+    host_request_process,
+    host_request_callback,
 };
 
 // Resolve .clap bundle path to actual dylib path (macOS bundles)

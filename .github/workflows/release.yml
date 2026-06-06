@@ -44,11 +44,15 @@ jobs:
       - name: Build
         run: cmake --build build --parallel --config Release
 
-      - name: Zip artifact (Unix)
-        if: runner.os != 'Windows'
+      - name: Zip artifact (Linux)
+        if: runner.os == 'Linux'
         run: |
           cp build/raypoketrack raypoketrack
           zip ${{ matrix.name }}.zip raypoketrack
+
+      - name: Zip artifact (macOS)
+        if: runner.os == 'macOS'
+        run: zip -r ${{ matrix.name }}.zip build/raypoketrack.app
 
       - name: Zip artifact (Windows)
         if: runner.os == 'Windows'
