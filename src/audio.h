@@ -24,6 +24,7 @@ typedef struct {
   bool pattern_loop;           // true = loop one pattern instead of full song
   uint8_t loop_pattern_idx;    // pattern index to loop (when pattern_loop)
   uint32_t loop_channel_mask;  // bitmask: channels that use loop_pattern_idx
+  int song_last_row;           // last song row with any non-empty pattern (computed at play)
   ChannelCursor cursors[SONG_CHANNELS];
   uint64_t tick_counter;
   uint32_t samples_per_tick;

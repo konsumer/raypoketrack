@@ -199,6 +199,38 @@ void screen_pattern_update(UIState *ui) {
         break;
     }
   }
+
+  // S (BTN_X): fill entire column with current row's value
+  if (input_pressed(BTN_X)) {
+    for (int i = 0; i < PATTERN_STEPS; i++) {
+      PatternStep *s = &pat->steps[i];
+      switch (ui->pattern_col) {
+        case 0: s->note = step->note; if (s->note != NOTE_EMPTY && s->note != NOTE_OFF && !s->velocity) s->velocity = 0xFF; break;
+        case 1: s->velocity = step->velocity; break;
+        case 2: s->instrument = step->instrument; break;
+        case 3: s->fx[0] = step->fx[0]; break;
+        case 4: s->fxv[0] = step->fxv[0]; break;
+        case 5: s->fx[1] = step->fx[1]; break;
+        case 6: s->fxv[1] = step->fxv[1]; break;
+      }
+    }
+  }
+
+  // A (BTN_Y): clear entire column
+  if (input_pressed(BTN_Y)) {
+    for (int i = 0; i < PATTERN_STEPS; i++) {
+      PatternStep *s = &pat->steps[i];
+      switch (ui->pattern_col) {
+        case 0: s->note = NOTE_EMPTY; break;
+        case 1: s->velocity = 0xFF; break;
+        case 2: s->instrument = 0; break;
+        case 3: s->fx[0] = TRACKER_EMPTY; break;
+        case 4: s->fxv[0] = 0; break;
+        case 5: s->fx[1] = TRACKER_EMPTY; break;
+        case 6: s->fxv[1] = 0; break;
+      }
+    }
+  }
 }
 
 void screen_pattern_draw(UIState *ui) {

@@ -181,7 +181,7 @@ static PatternStep *get_current_step(AudioEngine *eng, int ch) {
     pi = eng->loop_pattern_idx;
   } else {
     if (cur->song_row >= SONG_LENGTH)
-      cur->song_row = 0;
+      cur->song_row = SONG_LENGTH - 1;
     pi = s->patterns[ch][cur->song_row];
   }
   if (pi == TRACKER_EMPTY)
@@ -197,7 +197,7 @@ static void advance_cursor(AudioEngine *eng, ChannelCursor *cur) {
     cur->pattern_step = 0;
     if (!eng->pattern_loop) {
       cur->song_row++;
-      if (cur->song_row >= SONG_LENGTH) {
+      if (cur->song_row > eng->song_last_row) {
         if (eng->song->loop)
           cur->song_row = 0;
         else
@@ -280,6 +280,15 @@ void audio_play(AudioEngine *eng) {
   eng->pattern_loop = false;
   eng->tick_counter = 0;
   eng->sample_acc = eng->samples_per_tick;
+
+  // Find last song row with any non-empty pattern across all channels
+  int last = 0;
+  for (int row = 0; row < SONG_LENGTH; row++)
+    for (int ch = 0; ch < SONG_CHANNELS; ch++)
+      if (eng->song->patterns[ch][row] != TRACKER_EMPTY)
+        last = row;
+  eng->song_last_row = last;
+
   eng->playing = true;
 }
 

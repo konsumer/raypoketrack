@@ -33,6 +33,8 @@ You should be able to track quickly with a joystick, or keys:
 | A + ↑/↓ | Pattern, FX value col | Change FX value ±1 |
 | A + ←/→ | Pattern, FX value col | Change FX value ±16 |
 | B | Pattern, FX col | Clear FX |
+| X | Pattern | Fill entire column with current row's value |
+| Y | Pattern | Clear entire column |
 | L / R | Instrument | Previous / next instrument |
 | ↑/↓ | Instrument, slot panel | Navigate chain slots |
 | → | Instrument, slot panel | Enter param panel for selected slot |
@@ -44,16 +46,16 @@ You should be able to track quickly with a joystick, or keys:
 | A + ↑/↓ | Instrument, param panel | Change param value ±1 |
 | A + ←/→ | Instrument, param panel | Change param value ±16 |
 | B | Instrument, param panel | Reset param to default |
-| A (Enter/Return) | Instrument, FILE row | Open file picker |
+| A | Instrument, FILE row | Open file picker |
 | B | Instrument, FILE row | Clear file path |
 | ↑/↓ | Menu | Navigate items |
 | A + ↑/↓ | Menu, BPM | Change BPM ±1 |
 | A + ←/→ | Menu, BPM | Change BPM ±10 |
 | A + ↑/↓ | Menu, KEY | Change scale root note |
 | A + ↑/↓ | Menu, SCALE | Cycle scale (chromatic, major, minor, Persian…) |
-| A + A | Menu, SAVE/LOAD/NEW | Confirm action |
+| A | Menu | Confirm action |
 
-It may seem a bit inscrutable at first, but input is meant to be consistent and fast with a joystick, so once you get the hang of it, it should work well. A is "change this value" and B is "delete/reset/cancel", SELECT+arrow is "change screen" and START is "play song/pattern".
+It may seem a bit inscrutable at first, but input is meant to be consistent and fast with a joystick, so once you get the hang of it, it should work well. A is "edit/change value", B is "delete/reset/cancel", X is "fill column", Y is "clear column", SELECT+arrow is "change screen", and START is "play song/pattern".
 
 ## development
 
