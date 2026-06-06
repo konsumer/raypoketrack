@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Per-instrument RMS for sidechain ducking (NUM_INSTRUMENTS=16)
+float g_sidechain_rms[NUM_INSTRUMENTS] = {0};
+
 static uint32_t calc_samples_per_tick(uint8_t bpm) {
   return (AUDIO_SAMPLE_RATE * 60u) / ((uint32_t)bpm * 4u);
 }
@@ -162,10 +165,47 @@ static void render_channel(AudioEngine *eng, int ch, float *out_l, float *out_r,
                 eng->tmp_l, eng->tmp_r, eng->tmp_l, eng->tmp_r, frames);
   }
 
+  // Raw block RMS for sidechain ducking — ducker's envelope handles timing.
+  {
+    float rms_sum = 0.0f;
+    for (uint32_t f = 0; f < frames; f++) {
+      float v = (eng->tmp_l[f] + eng->tmp_r[f]) * 0.5f;
+      rms_sum += v * v;
+    }
+    g_sidechain_rms[ii] = (frames > 0) ? sqrtf(rms_sum / (float)frames) : 0.0f;
+  }
+
   // Mix into master
   for (uint32_t f = 0; f < frames; f++) {
     out_l[f] += eng->tmp_l[f];
     out_r[f] += eng->tmp_r[f];
+  }
+}
+
+// Pre-load chan_states for a specific pattern on the given channel (main-thread safe).
+// Scans pattern for the first note-carrying step and ensures states exist for that instrument.
+static void preload_chan_states_for_pattern(AudioEngine *eng, int ch, uint8_t pi) {
+  if (pi == TRACKER_EMPTY) return;
+  Pattern *pat = &eng->song->pattern_data[pi];
+  for (int step = 0; step < PATTERN_STEPS; step++) {
+    PatternStep *s = &pat->steps[step];
+    if (s->note != NOTE_EMPTY && s->note != NOTE_OFF) {
+      ensure_chan_states(eng, ch, s->instrument);
+      return;
+    }
+  }
+}
+
+// Pre-load chan_states for all channels in the song arrangement (call before playing).
+static void preload_all_chan_states(AudioEngine *eng) {
+  for (int ch = 0; ch < SONG_CHANNELS; ch++) {
+    for (int row = 0; row < SONG_LENGTH; row++) {
+      uint8_t pi = eng->song->patterns[ch][row];
+      if (pi != TRACKER_EMPTY) {
+        preload_chan_states_for_pattern(eng, ch, pi);
+        break;  // only need first pattern per channel to prime the state
+      }
+    }
   }
 }
 
@@ -221,7 +261,7 @@ static void fire_step(AudioEngine *eng, int ch, PatternStep *step) {
   // On an empty step: apply FX to whatever is already playing on this channel.
   uint8_t inst_idx;
   if (step->note != NOTE_EMPTY) {
-    inst_idx = step->instrument < NUM_INSTRUMENTS ? step->instrument : 0;
+    inst_idx = step->instrument;
     ensure_chan_states(eng, ch, inst_idx);
   } else {
     if (eng->active_inst[ch] == TRACKER_EMPTY) return;
@@ -303,6 +343,7 @@ void audio_play(AudioEngine *eng) {
       if (eng->song->patterns[ch][row] != TRACKER_EMPTY)
         last = row;
   eng->song_last_row = last;
+  preload_all_chan_states(eng);
 
   eng->playing = true;
 }
@@ -331,6 +372,12 @@ void audio_play_pattern(AudioEngine *eng, uint8_t pattern_idx) {
   if (!eng->loop_channel_mask)
     eng->loop_channel_mask = 1u;
 
+  // Pre-load states on this (main) thread so file I/O doesn't hit the audio callback
+  for (int ch = 0; ch < SONG_CHANNELS; ch++) {
+    if (eng->loop_channel_mask & (1u << ch))
+      preload_chan_states_for_pattern(eng, ch, pattern_idx);
+  }
+
   eng->tick_counter = 0;
   eng->sample_acc = eng->samples_per_tick;
   eng->playing = true;
@@ -341,10 +388,8 @@ void audio_stop(AudioEngine *eng) {
     return;
   eng->playing = false;
   for (int ch = 0; ch < SONG_CHANNELS; ch++) {
-    if (eng->active_note[ch]) {
-      chan_note_off(eng, ch, eng->active_note[ch]);
-      eng->active_note[ch] = 0;
-    }
+    chan_kill(eng, ch);  // immediate stop — prevents TSF release tails replaying on next start
+    eng->active_note[ch] = 0;
   }
 }
 

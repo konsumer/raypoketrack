@@ -38,7 +38,6 @@ static void sf2_destroy(UnitState *s) {
 static void sf2_set_data(UnitState *s, const char *data, const char *base_dir) {
   const char *rel = (data && data[0]) ? data : "soundfont.sf2";
   unit_resolve_path(base_dir, rel, s->path, sizeof(s->path));
-  // Reload if path changed
   if (s->sf) {
     tsf_close(s->sf);
     s->sf = NULL;
@@ -70,7 +69,7 @@ static void sf2_note_on(UnitState *s, uint8_t note, uint8_t vel, const uint8_t *
   if (!s->sf)
     return;
   tsf_channel_set_presetnumber(s->sf, 0, preset, bank == 128);
-  tsf_channel_note_on(s->sf, 0, note, vel / 127.0f);
+  tsf_channel_note_on(s->sf, 0, note, vel / 255.0f);
 }
 
 static void sf2_note_off(UnitState *s, uint8_t note) {
@@ -80,7 +79,7 @@ static void sf2_note_off(UnitState *s, uint8_t note) {
 
 static void sf2_kill(UnitState *s) {
   if (s->sf)
-    tsf_note_off_all(s->sf);
+    tsf_channel_sounds_off_all(s->sf, 0);  // immediate, no release tail
 }
 
 static void sf2_render(UnitState *s, const uint8_t *p,

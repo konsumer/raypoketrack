@@ -40,8 +40,6 @@ static void preview(UIState *ui, uint8_t note) {
   if (note == NOTE_EMPTY || note == NOTE_OFF)
     return;
   uint8_t inst = ui->song->pattern_data[ui->ctx_pattern].steps[ui->pattern_row].instrument;
-  if (inst >= NUM_INSTRUMENTS)
-    inst = 0;
   audio_preview_note(ui->engine, inst, note);
 }
 

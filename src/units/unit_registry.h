@@ -14,6 +14,12 @@ extern const UnitDef unit_chorus;
 extern const UnitDef unit_flanger;
 extern const UnitDef unit_phaser;
 extern const UnitDef unit_gran;
+extern const UnitDef unit_filter;
+extern const UnitDef unit_sampler;
+extern const UnitDef unit_bitcrush;
+extern const UnitDef unit_tremolo;
+extern const UnitDef unit_compressor;
+extern const UnitDef unit_ducker;
 
 const UnitDef *unit_find(const char *id);
 void unit_list(const UnitDef **out, int *count);

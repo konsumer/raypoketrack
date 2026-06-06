@@ -16,6 +16,12 @@ static const UnitDef *REGISTRY[] = {
     &unit_flanger,
     &unit_phaser,
     &unit_gran,
+    &unit_filter,
+    &unit_sampler,
+    &unit_bitcrush,
+    &unit_tremolo,
+    &unit_compressor,
+    &unit_ducker,
     NULL,
 };
 

@@ -75,6 +75,12 @@ set(SOURCES
     src/units/flanger.c
     src/units/phaser.c
     src/units/gran.c
+    src/units/filter.c
+    src/units/sampler.c
+    src/units/bitcrush.c
+    src/units/tremolo.c
+    src/units/compressor.c
+    src/units/ducker.c
     src/units/unit_registry.c
 )
 

@@ -56,7 +56,7 @@ void screen_instrument_update(UIState *ui) {
         memset(&inst->chain[slot], 0, sizeof(ChainSlot));
       }
     } else {
-      const UnitDef *defs[16];
+      const UnitDef *defs[32];
       int nf = 0;
       unit_list(defs, &nf);
       ChainSlot *sl = &inst->chain[slot];

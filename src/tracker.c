@@ -99,6 +99,9 @@ void tracker_inst_set_slot(TrackerInstrument *inst, int slot, const char *unit_i
   if (slot < 0 || slot >= CHAIN_MAX)
     return;
   ChainSlot *s = &inst->chain[slot];
+  // Clear file data when switching to a different unit type — old paths are meaningless
+  if (strncmp(s->unit_id, unit_id, UNIT_ID_LEN) != 0)
+    s->data[0] = '\0';
   strncpy(s->unit_id, unit_id, UNIT_ID_LEN - 1);
   s->unit_id[UNIT_ID_LEN - 1] = '\0';
   s->enabled = true;

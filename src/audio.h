@@ -66,3 +66,6 @@ void audio_preview_note(AudioEngine *eng, uint8_t inst_idx, uint8_t note);
 void audio_preview_kill(AudioEngine *eng);
 
 void audio_fill_buffer(AudioEngine *eng, float *out, uint32_t frames);
+
+// Per-instrument RMS level for sidechain ducking (indexed by instrument index 0-255)
+extern float g_sidechain_rms[NUM_INSTRUMENTS];
