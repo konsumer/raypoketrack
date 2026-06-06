@@ -57,6 +57,11 @@ You should be able to track quickly with a joystick, or keys:
 
 It may seem a bit inscrutable at first, but input is meant to be consistent and fast with a joystick, so once you get the hang of it, it should work well. A is "edit/change value", B is "delete/reset/cancel", X is "fill column", Y is "clear column", SELECT+arrow is "change screen", and START is "play song/pattern".
 
+
+Here are some videos:
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/3JeYaVriygU/0.jpg)](https://www.youtube.com/watch?v=3JeYaVriygU)
+
 ## development
 
 ```sh
