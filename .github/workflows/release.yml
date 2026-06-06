@@ -38,11 +38,20 @@ jobs:
             libxinerama-dev \
             libasound2-dev
 
-      - name: Configure
+      - name: Install MinGW (Windows)
+        if: runner.os == 'Windows'
+        run: choco install mingw -y
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -G "MinGW Makefiles"
+
+      - name: Configure (non-Windows)
+        if: runner.os != 'Windows'
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build --parallel --config Release
+        run: cmake --build build --parallel
 
       - name: Zip artifact (Linux)
         if: runner.os == 'Linux'
@@ -57,7 +66,7 @@ jobs:
       - name: Zip artifact (Windows)
         if: runner.os == 'Windows'
         run: |
-          cp build/Release/raypoketrack.exe raypoketrack.exe
+          cp build/raypoketrack.exe raypoketrack.exe
           Compress-Archive -Path raypoketrack.exe -DestinationPath ${{ matrix.name }}.zip
 
       - name: Upload to release

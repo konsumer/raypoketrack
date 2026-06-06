@@ -14,10 +14,6 @@ set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-if(MSVC)
-  add_compile_options(/std:c11 /D_USE_MATH_DEFINES)
-endif()
-
 include(FetchContent)
 
 # raylib 6.0
