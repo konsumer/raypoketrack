@@ -18,7 +18,7 @@ jobs:
           - os: macos-latest
             name: raypoketrack-macos
           - os: windows-latest
-            name: raypoketrack-windows.exe
+            name: raypoketrack-windows
 
     runs-on: ${{ matrix.os }}
 
@@ -44,15 +44,19 @@ jobs:
       - name: Build
         run: cmake --build build --parallel --config Release
 
-      - name: Stage artifact (Unix)
+      - name: Zip artifact (Unix)
         if: runner.os != 'Windows'
-        run: cp build/raypoketrack ${{ matrix.name }}
+        run: |
+          cp build/raypoketrack raypoketrack
+          zip ${{ matrix.name }}.zip raypoketrack
 
-      - name: Stage artifact (Windows)
+      - name: Zip artifact (Windows)
         if: runner.os == 'Windows'
-        run: cp build/Release/raypoketrack.exe ${{ matrix.name }}
+        run: |
+          cp build/Release/raypoketrack.exe raypoketrack.exe
+          Compress-Archive -Path raypoketrack.exe -DestinationPath ${{ matrix.name }}.zip
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.name }}
+          files: ${{ matrix.name }}.zip
