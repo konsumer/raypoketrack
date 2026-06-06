@@ -1,10 +1,10 @@
 // Synthesized drum source unit
 // P0 TYPE:  00-63=kick  64-127=snare  128-191=hihat-c  192-255=hihat-o
-// P1 PITCH: 00=low  7F=mid  FF=high
-// P2 DECAY: 00=short  FF=long
-// P3 TONE:  00=dark(sine)  FF=bright(noise)
-// P4 PUNCH: 00=soft  FF=punchy
-// P5 VOL:   00=silent  FF=full
+// P1 DECAY: 00=short  FF=long
+// P2 TONE:  00=dark(sine)  FF=bright(noise)
+// P3 PUNCH: 00=soft  FF=punchy
+// P4 VOL:   00=silent  FF=full
+// pitch derived from note (C4=normal)
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,13 +35,12 @@ static UnitState *drum_create(float sr) {
 static void drum_destroy(UnitState *s) { free(s); }
 
 static void drum_note_on(UnitState *s, uint8_t note, uint8_t vel, const uint8_t *p) {
-  (void)note;
   s->type = p[0] < 4 ? p[0] : 3;
-  float pitch_m = p2f(p[1], 0.3f, 2.5f);
-  float decay_t = p2f(p[2], 0.02f, 0.9f);
-  s->tone = p2f(p[3], 0.0f, 1.0f);
-  float punch = p2f(p[4], 0.8f, 3.0f);
-  s->vol = p2f(p[5], 0.0f, 1.0f) * (vel / 127.0f);
+  float pitch_m = powf(2.0f, (note - 60) / 12.0f);
+  float decay_t = p2f(p[1], 0.02f, 0.9f);
+  s->tone = p2f(p[2], 0.0f, 1.0f);
+  float punch = p2f(p[3], 0.8f, 3.0f);
+  s->vol = p2f(p[4], 0.0f, 1.0f) * (vel / 127.0f);
   s->phase = 0;
   s->amp = punch;
   s->noise_seed = 99991u;
@@ -126,9 +125,9 @@ const UnitDef unit_drum = {
     .id = "drum",
     .name = "DRUM",
     .is_source = true,
-    .num_params = 6,
-    .param_names = {"TYPE", "PITCH", "DECAY", "TONE", "PUNCH", "VOL"},
-    .param_defaults = {0, 128, 110, 80, 160, 200},
+    .num_params = 5,
+    .param_names = {"TYPE", "DECAY", "TONE", "PUNCH", "VOL"},
+    .param_defaults = {0, 110, 80, 160, 200},
     .param_enums = {drum_type_names},
     .param_enum_count = {4},
     .create = drum_create,

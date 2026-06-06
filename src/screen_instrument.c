@@ -195,14 +195,20 @@ void screen_instrument_draw(UIState *ui) {
     return;
   }
 
-  DrawText(TextFormat("%s  %s  [>]=params",
+  DrawText(TextFormat("%s  %s",
                       def->name, def->is_source ? "SOURCE" : "EFFECT"),
            PANEL_W + 4, INST_CONTENT_Y + (CH_H - FONT_S) / 2, FONT_S, def->is_source ? C_NOTE : C_FX);
 
   ChainSlot *sl = &inst->chain[cur_slot];
-  int bar_x = PANEL_W + 70;
+  int bar_x = PANEL_W + 94;
   int bar_w = WIN_W - bar_x - 4;
   int nparams = def->num_params;
+
+  int param_offset = 0;
+  for (int s = 0; s < cur_slot; s++) {
+    const UnitDef *sd = slot_def(inst, s);
+    if (sd) param_offset += sd->num_params;
+  }
 
   // Params
   for (int pi = 0; pi < nparams; pi++) {
@@ -212,14 +218,14 @@ void screen_instrument_draw(UIState *ui) {
     int param_row = CHAIN_MAX + pi;
     bool cur = in_params && (param_row == ui->inst_row);
     DrawRectangle(PANEL_W, y, WIN_W - PANEL_W, CH_H, cur ? C_CURSOR : (pi % 2 == 0 ? C_BG_ALT : C_BG));
-    DrawText(def->param_names[pi], PANEL_W + 4, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_TITLE : C_TEXT);
+    DrawText(TextFormat("%02X %s", param_offset + pi, def->param_names[pi]), PANEL_W + 4, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_TITLE : C_TEXT);
 
     bool is_enum = def->param_enum_count[pi] > 0 && def->param_enums[pi];
     if (is_enum) {
       uint8_t idx = sl->params[pi] % def->param_enum_count[pi];
-      DrawText(def->param_enums[pi][idx], PANEL_W + 50, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_NOTE : C_VEL);
+      DrawText(def->param_enums[pi][idx], PANEL_W + 72, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_NOTE : C_VEL);
     } else {
-      DrawText(TextFormat("%02X", sl->params[pi]), PANEL_W + 50, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_NOTE : C_VEL);
+      DrawText(TextFormat("%02X", sl->params[pi]), PANEL_W + 72, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_NOTE : C_VEL);
       float frac = sl->params[pi] / 255.0f;
       DrawRectangle(bar_x, y + 3, bar_w, CH_H - 6, C_DIM);
       DrawRectangle(bar_x, y + 3, (int)(frac * bar_w), CH_H - 6, cur ? C_NOTE : C_HEADER);

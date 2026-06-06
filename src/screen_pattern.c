@@ -34,17 +34,6 @@ static int col_w(int c) {
 static uint8_t clamp8(int v) { return v < 0 ? 0 : v > 255 ? 255
                                                           : (uint8_t)v; }
 
-// Total params across all filled chain slots (global index upper bound)
-static int inst_total_params(TrackerSong *song, uint8_t inst_idx) {
-  TrackerInstrument *inst = &song->instruments[inst_idx];
-  int total = 0;
-  for (int s = 0; s < CHAIN_MAX; s++) {
-    if (!inst->chain[s].unit_id[0]) continue;
-    const UnitDef *def = unit_find(inst->chain[s].unit_id);
-    if (def) total += def->num_params;
-  }
-  return total > 0 ? total : 1;
-}
 
 static void preview(UIState *ui, uint8_t note) {
   audio_preview_kill(ui->engine);
@@ -176,11 +165,12 @@ void screen_pattern_update(UIState *ui) {
           step->instrument = 0;
         ui->ctx_instrument = step->instrument;
         break;
-      case 3: {  // global param index across all chain slots, TRACKER_EMPTY=none
+      case 3: {
           uint8_t *f = &step->fx[0];
-          int maxp = inst_total_params(ui->song, step->instrument) - 1;
-          if (ui_repeat(BTN_UP))   *f = (*f == TRACKER_EMPTY) ? 0 : (*f < (uint8_t)maxp ? *f + 1 : TRACKER_EMPTY);
-          if (ui_repeat(BTN_DOWN)) *f = (*f == TRACKER_EMPTY || *f == 0) ? TRACKER_EMPTY : *f - 1;
+          if (ui_repeat(BTN_UP))    *f = (*f == TRACKER_EMPTY) ? 0 : (*f < 0xFE ? *f + 1 : TRACKER_EMPTY);
+          if (ui_repeat(BTN_DOWN))  *f = (*f == TRACKER_EMPTY || *f == 0) ? TRACKER_EMPTY : *f - 1;
+          if (ui_repeat(BTN_RIGHT)) *f = (*f == TRACKER_EMPTY) ? 0 : (*f + 16 > 0xFE ? 0xFE : *f + 16);
+          if (ui_repeat(BTN_LEFT))  *f = (*f == TRACKER_EMPTY || *f < 16) ? TRACKER_EMPTY : *f - 16;
           if (input_pressed(BTN_B)) *f = TRACKER_EMPTY;
           break;
         }
@@ -191,11 +181,12 @@ void screen_pattern_update(UIState *ui) {
         if (ui_repeat(BTN_LEFT))  step->fxv[0] = clamp8((int)step->fxv[0] - 16);
         if (input_pressed(BTN_B)) step->fxv[0] = 0;
         break;
-      case 5: {  // global param index across all chain slots, TRACKER_EMPTY=none
+      case 5: {
           uint8_t *f = &step->fx[1];
-          int maxp = inst_total_params(ui->song, step->instrument) - 1;
-          if (ui_repeat(BTN_UP))   *f = (*f == TRACKER_EMPTY) ? 0 : (*f < (uint8_t)maxp ? *f + 1 : TRACKER_EMPTY);
-          if (ui_repeat(BTN_DOWN)) *f = (*f == TRACKER_EMPTY || *f == 0) ? TRACKER_EMPTY : *f - 1;
+          if (ui_repeat(BTN_UP))    *f = (*f == TRACKER_EMPTY) ? 0 : (*f < 0xFE ? *f + 1 : TRACKER_EMPTY);
+          if (ui_repeat(BTN_DOWN))  *f = (*f == TRACKER_EMPTY || *f == 0) ? TRACKER_EMPTY : *f - 1;
+          if (ui_repeat(BTN_RIGHT)) *f = (*f == TRACKER_EMPTY) ? 0 : (*f + 16 > 0xFE ? 0xFE : *f + 16);
+          if (ui_repeat(BTN_LEFT))  *f = (*f == TRACKER_EMPTY || *f < 16) ? TRACKER_EMPTY : *f - 16;
           if (input_pressed(BTN_B)) *f = TRACKER_EMPTY;
           break;
         }
@@ -276,7 +267,7 @@ void screen_pattern_draw(UIState *ui) {
           break;
         case 3:
           if (s->fx[0] == TRACKER_EMPTY) { txt = "--"; fc = cur_cell ? C_TEXT : C_DIM; }
-          else { snprintf(tmp, 8, "%d", s->fx[0]); txt = tmp; fc = C_FX; }
+          else { snprintf(tmp, 8, "%02X", s->fx[0]); txt = tmp; fc = C_FX; }
           break;
         case 4:
           if (s->fx[0] == TRACKER_EMPTY) {
@@ -290,7 +281,7 @@ void screen_pattern_draw(UIState *ui) {
           break;
         case 5:
           if (s->fx[1] == TRACKER_EMPTY) { txt = "--"; fc = cur_cell ? C_TEXT : C_DIM; }
-          else { snprintf(tmp, 8, "%d", s->fx[1]); txt = tmp; fc = C_FX; }
+          else { snprintf(tmp, 8, "%02X", s->fx[1]); txt = tmp; fc = C_FX; }
           break;
         case 6:
           if (s->fx[1] == TRACKER_EMPTY) {

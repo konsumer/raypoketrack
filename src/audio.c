@@ -197,8 +197,12 @@ static void advance_cursor(AudioEngine *eng, ChannelCursor *cur) {
     cur->pattern_step = 0;
     if (!eng->pattern_loop) {
       cur->song_row++;
-      if (cur->song_row >= SONG_LENGTH)
-        cur->song_row = 0;
+      if (cur->song_row >= SONG_LENGTH) {
+        if (eng->song->loop)
+          cur->song_row = 0;
+        else
+          eng->playing = false;
+      }
     }
   }
 }

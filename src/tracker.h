@@ -67,6 +67,7 @@ typedef struct {
   char name[32];
   uint8_t scale_root;  // 0=C .. 11=B
   uint8_t scale_idx;   // 0=chromatic, see SCALES[]
+  bool loop;           // true = restart from row 0 at song end
 } TrackerSong;
 
 #define NUM_SCALES 45

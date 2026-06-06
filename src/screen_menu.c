@@ -15,6 +15,7 @@ typedef enum {
   MENU_BPM = 0,
   MENU_SCALE_ROOT,
   MENU_SCALE,
+  MENU_LOOP,
   MENU_SAVE,
   MENU_LOAD,
   MENU_NEW,
@@ -25,6 +26,7 @@ static const char *menu_labels[] = {
     "BPM",
     "KEY",
     "SCALE",
+    "LOOP",
     "SAVE",
     "LOAD",
     "NEW SONG",
@@ -98,6 +100,11 @@ void screen_menu_update(UIState *ui) {
           ui->song->scale_idx = (ui->song->scale_idx + NUM_SCALES - 1) % NUM_SCALES;
         break;
 
+      case MENU_LOOP:
+        if (input_pressed(BTN_UP) || input_pressed(BTN_DOWN) || input_pressed(BTN_A))
+          ui->song->loop = !ui->song->loop;
+        break;
+
       case MENU_SAVE:
         if (input_pressed(BTN_A)) {
           g_fb_mode = MENU_FB_SAVE;
@@ -148,6 +155,9 @@ void screen_menu_draw(UIState *ui) {
       case MENU_SCALE:
         DrawText(SCALES[ui->song->scale_idx % NUM_SCALES].name,
                  100, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_NOTE : C_TEXT);
+        break;
+      case MENU_LOOP:
+        DrawText(ui->song->loop ? "ON" : "OFF", 100, y + (CH_H - FONT_S) / 2, FONT_S, cur ? C_NOTE : C_TEXT);
         break;
       case MENU_SAVE:
       case MENU_LOAD:

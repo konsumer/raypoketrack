@@ -121,6 +121,7 @@ void tracker_init(TrackerSong *song) {
     snprintf(song->instruments[i].name, 16, "INST%02X", i);
   song->bpm = 120;
   song->swing = 0;
+  song->loop = true;
   strncpy(song->name, "UNTITLED", 32);
 }
 
