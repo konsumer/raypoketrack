@@ -80,10 +80,10 @@ There are some built-in units (effects/sound-generators) but you can also use CL
 **CLAP lands at:**
 - macOS:  `/Library/Audio/Plug-Ins/CLAP/*.clap`
 - Windows: `C:\Program Files\Common Files\CLAP\*.clap`
-- Linux: `/usr/lib/clap//*.clap`
+- Linux: `/usr/lib/clap/*.clap`
 
 
-The can be pretty confusing, since the original GUI is missing, and that is generally how these plugins were designed to be used, but it's doable. Here is an example test with "Surge XT":
+They can be pretty confusing, since the original GUI is missing, and that is generally how these plugins were designed to be used, but it's doable. Here is an example test with "Surge XT":
 
 map these params:
 
@@ -104,7 +104,7 @@ C-4  00  00 80
 
 which sequences cutoff.
 
-At some point, I will try to make a bunch of simpler 1-function CLAP units that cna be dropped in easier.
+At some point, I will try to make a bunch of simpler 1-function CLAP units that can be dropped in easier. In general, I htink it's actually better to chain several differnt units together, and there are a lot of built-ins that should just work.
 
 
 ## development
