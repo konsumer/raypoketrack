@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(raypoketrack VERSION 0.2.0 LANGUAGES C)
+project(raypoketrack VERSION 0.2.0 LANGUAGES C OBJC)
 
 if(POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
@@ -116,7 +116,8 @@ if(EMSCRIPTEN)
 else()
     target_link_libraries(${PROJECT_NAME} PRIVATE raylib m)
     if(APPLE)
-        target_link_libraries(${PROJECT_NAME} PRIVATE "-framework Cocoa")
+        target_sources(${PROJECT_NAME} PRIVATE src/macos_dialog.m)
+        target_link_libraries(${PROJECT_NAME} PRIVATE "-framework Cocoa" "-framework AppKit")
         set_target_properties(${PROJECT_NAME} PROPERTIES
             MACOSX_BUNDLE TRUE
             MACOSX_BUNDLE_BUNDLE_NAME "raypoketrack"

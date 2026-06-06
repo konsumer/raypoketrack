@@ -63,6 +63,10 @@ typedef struct {
 
   int blink;
   bool inst_data_editing;  // true while typing in the data/file field
+
+  // CLAP param picker sub-mode
+  bool clap_picker_active;
+  int  clap_picker_row;   // cursor in full plugin param list
 } UIState;
 
 void ui_init(UIState *ui, TrackerSong *song, AudioEngine *engine);

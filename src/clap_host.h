@@ -33,3 +33,14 @@ void clap_host_process(ClapPlugin *p,
 
 bool clap_host_is_instrument(ClapPlugin *p);
 const char *clap_host_name(ClapPlugin *p);
+
+// Param query (call after load)
+uint32_t clap_host_param_count(ClapPlugin *p);
+bool clap_host_param_info(ClapPlugin *p, uint32_t idx,
+                          uint32_t *out_id, char *out_name, size_t name_sz,
+                          double *out_min, double *out_max, double *out_default);
+bool clap_host_param_flags(ClapPlugin *p, uint32_t idx, uint32_t *out_flags);
+// Returns true if param is a stepped (integer) parameter
+bool clap_host_param_is_stepped(ClapPlugin *p, uint32_t idx);
+// Queue a param value change for next process() call
+void clap_host_queue_param(ClapPlugin *p, uint32_t param_id, double value);

@@ -215,11 +215,18 @@ static void fire_step(AudioEngine *eng, int ch, PatternStep *step) {
     eng->active_note[ch] = 0;
     return;
   }
-  if (step->note == NOTE_EMPTY)
-    return;
 
-  uint8_t inst_idx = step->instrument < NUM_INSTRUMENTS ? step->instrument : 0;
-  ensure_chan_states(eng, ch, inst_idx);
+  // Determine which instrument to apply FX to.
+  // On a note step: use step's instrument and ensure states exist.
+  // On an empty step: apply FX to whatever is already playing on this channel.
+  uint8_t inst_idx;
+  if (step->note != NOTE_EMPTY) {
+    inst_idx = step->instrument < NUM_INSTRUMENTS ? step->instrument : 0;
+    ensure_chan_states(eng, ch, inst_idx);
+  } else {
+    if (eng->active_inst[ch] == TRACKER_EMPTY) return;
+    inst_idx = eng->active_inst[ch];
+  }
 
   // Apply per-step param overrides.
   // fx[i] is a global param index spanning all chain slots in order:
@@ -232,13 +239,20 @@ static void fire_step(AudioEngine *eng, int ch, PatternStep *step) {
       if (!inst->chain[s].unit_id[0]) continue;
       const UnitDef *def = unit_find(inst->chain[s].unit_id);
       if (!def) continue;
-      if (remaining < def->num_params) {
-        inst->chain[s].params[remaining] = step->fxv[fi];
+      UnitState *st = eng->chan_states[ch][s];
+      int nparams = (def->dyn_num_params && st) ? def->dyn_num_params(st) : def->num_params;
+      if (remaining < nparams) {
+        if (def->set_param_val && st)
+          def->set_param_val(st, remaining, step->fxv[fi]);
+        else if (remaining < UNIT_MAX_PARAMS)
+          inst->chain[s].params[remaining] = step->fxv[fi];
         break;
       }
-      remaining -= def->num_params;
+      remaining -= nparams;
     }
   }
+
+  if (step->note == NOTE_EMPTY) return;
 
   if (eng->active_note[ch])
     chan_note_off(eng, ch, eng->active_note[ch]);
@@ -272,6 +286,7 @@ void audio_shutdown(AudioEngine *eng) {
 void audio_play(AudioEngine *eng) {
   if (eng->playing)
     return;
+  audio_preview_kill(eng);
   for (int ch = 0; ch < SONG_CHANNELS; ch++) {
     eng->cursors[ch].song_row = 0;
     eng->cursors[ch].pattern_step = 0;
@@ -295,6 +310,7 @@ void audio_play(AudioEngine *eng) {
 void audio_play_pattern(AudioEngine *eng, uint8_t pattern_idx) {
   if (eng->playing)
     audio_stop(eng);
+  audio_preview_kill(eng);
   for (int ch = 0; ch < SONG_CHANNELS; ch++) {
     eng->cursors[ch].song_row = 0;
     eng->cursors[ch].pattern_step = 0;
@@ -351,6 +367,10 @@ void audio_set_save_dir(AudioEngine *eng, const char *save_file_path) {
   for (int ch = 0; ch < SONG_CHANNELS; ch++)
     destroy_chan_states(eng, ch);
   destroy_preview_states(eng);
+}
+
+void audio_ensure_preview(AudioEngine *eng, uint8_t inst_idx) {
+  ensure_preview_states(eng, inst_idx);
 }
 
 void audio_preview_note(AudioEngine *eng, uint8_t inst_idx, uint8_t note) {

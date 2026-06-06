@@ -82,6 +82,9 @@ void file_browser_tick(void) {}
 
 #else
 #include "tinyfiledialogs.h"
+#ifdef __APPLE__
+#include "macos_dialog.h"
+#endif
 
 static void parse_filter(const char *filter, const char **fptrs, char *fbuf, int bufsz, int *fnc) {
     *fnc = 0;
@@ -97,6 +100,15 @@ static void parse_filter(const char *filter, const char **fptrs, char *fbuf, int
 }
 
 void file_browser_open(const char *title, const char *filter) {
+#ifdef __APPLE__
+    // .clap bundles are macOS packages — neither file nor folder tinyfd dialog can select them.
+    // Use NSOpenPanel with canChooseDirectories=YES which bypasses the restriction.
+    if (filter && strstr(filter, ".clap")) {
+        macos_open_directory_dialog(title, g_result, sizeof(g_result));
+        g_ready = g_result[0] != '\0';
+        return;
+    }
+#endif
     const char *fptrs[16]; char fbuf[256] = {0}; int fnc = 0;
     parse_filter(filter, fptrs, fbuf, sizeof(fbuf), &fnc);
     const char *p = tinyfd_openFileDialog(title ? title : "Open", "", fnc, fptrs, NULL, 0);

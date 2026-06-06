@@ -60,6 +60,8 @@ bool audio_is_playing(const AudioEngine *eng);
 // Destroy live states for inst_idx so they rebuild cleanly after slot changes
 void audio_rebuild_instrument(AudioEngine *eng, uint8_t inst_idx);
 
+// Ensure preview states exist for inst_idx (so instrument screen can read param state)
+void audio_ensure_preview(AudioEngine *eng, uint8_t inst_idx);
 void audio_preview_note(AudioEngine *eng, uint8_t inst_idx, uint8_t note);
 void audio_preview_kill(AudioEngine *eng);
 

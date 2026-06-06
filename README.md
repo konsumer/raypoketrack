@@ -82,6 +82,31 @@ There are some built-in units (effects/sound-generators) but you can also use CL
 - Windows: `C:\Program Files\Common Files\CLAP\*.clap`
 - Linux: `/usr/lib/clap//*.clap`
 
+
+The can be pretty confusing, since the original GUI is missing, and that is generally how these plugins were designed to be used, but it's doable. Here is an example test with "Surge XT":
+
+map these params:
+
+- 319 (cutoff)
+- 320 (resonance)
+- 317 (filter type)
+
+set resonance high, and filter-type to 10 hex (lowpass)
+
+Pattern would look like:
+
+ ```
+C-4  00  00 80
+---  00  00 90
+---  00  00 A0
+---  00  00 B0
+```
+
+which sequences cutoff.
+
+At some point, I will try to make a bunch of simpler 1-function CLAP units that cna be dropped in easier.
+
+
 ## development
 
 ```sh

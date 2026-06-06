@@ -27,15 +27,20 @@ struct ClapPlugin {
   const clap_plugin_t *plugin;
   const clap_plugin_audio_ports_t *audio_ports;
   const clap_plugin_note_ports_t *note_ports;
+  const clap_plugin_params_t *params_ext;
 
   float sample_rate;
   uint32_t block_size;
   bool is_instrument;
   char name[128];
 
-  // Pending MIDI events for next process call
+  // Pending note events for next process call
   clap_event_note_t events[MAX_CLAP_EVENTS];
   int event_count;
+
+  // Pending param value events for next process call
+  clap_event_param_value_t param_events[16];
+  int param_event_count;
 
   // Audio buffers
   float *buf_out_l;
@@ -75,15 +80,22 @@ static clap_host_t s_host = {
 // Resolve .clap bundle path to actual dylib path (macOS bundles)
 static void resolve_clap_path(const char *in, char *out, size_t out_size) {
 #ifdef __APPLE__
+  // Strip trailing slash (tinyfd_selectFolderDialog returns "path/")
+  char tmp[512];
+  strncpy(tmp, in, sizeof(tmp) - 1);
+  tmp[sizeof(tmp) - 1] = '\0';
+  size_t len = strlen(tmp);
+  while (len > 1 && tmp[len - 1] == '/') tmp[--len] = '\0';
+
   // <name>.clap/Contents/MacOS/<name>
-  const char *slash = strrchr(in, '/');
-  const char *basename = slash ? slash + 1 : in;
+  const char *slash = strrchr(tmp, '/');
+  const char *base = slash ? slash + 1 : tmp;
   char stem[256];
-  strncpy(stem, basename, sizeof(stem));
+  strncpy(stem, base, sizeof(stem) - 1);
+  stem[sizeof(stem) - 1] = '\0';
   char *dot = strrchr(stem, '.');
-  if (dot)
-    *dot = '\0';
-  snprintf(out, out_size, "%s/Contents/MacOS/%s", in, stem);
+  if (dot) *dot = '\0';
+  snprintf(out, out_size, "%s/Contents/MacOS/%s", tmp, stem);
 #else
   strncpy(out, in, out_size);
 #endif
@@ -164,6 +176,8 @@ ClapPlugin *clap_host_load(const char *path, const char *plugin_id, float sample
 
   cp->audio_ports = (const clap_plugin_audio_ports_t *)
                         plugin->get_extension(plugin, CLAP_EXT_AUDIO_PORTS);
+  cp->params_ext = (const clap_plugin_params_t *)
+                       plugin->get_extension(plugin, CLAP_EXT_PARAMS);
 
   plugin->activate(plugin, sample_rate, 1, block_size);
   plugin->start_processing(plugin);
@@ -220,14 +234,16 @@ void clap_host_note_off(ClapPlugin *p, uint8_t note, uint32_t offset) {
   ev->velocity = 0.0;
 }
 
-// Input event list helpers
-static const clap_event_note_t *list_get(const clap_input_events_t *list, uint32_t index) {
+// Input event list helpers — param events first (time=0), then note events
+static const clap_event_header_t *list_get(const clap_input_events_t *list, uint32_t index) {
   ClapPlugin *p = (ClapPlugin *)list->ctx;
-  return (const clap_event_note_t *)&p->events[index];
+  if ((int)index < p->param_event_count)
+    return &p->param_events[index].header;
+  return &p->events[index - p->param_event_count].header;
 }
 static uint32_t list_size(const clap_input_events_t *list) {
   ClapPlugin *p = (ClapPlugin *)list->ctx;
-  return (uint32_t)p->event_count;
+  return (uint32_t)(p->param_event_count + p->event_count);
 }
 
 // Output event list helpers (we discard output events for now)
@@ -258,8 +274,7 @@ void clap_host_process(ClapPlugin *p,
 
   // clap_input_events_t: ctx, size, get
   clap_input_events_t in_events = {
-      p, list_size,
-      (const clap_event_header_t *(CLAP_ABI *)(const clap_input_events_t *, uint32_t))list_get,
+      p, list_size, list_get,
   };
   // clap_output_events_t: ctx, try_push
   clap_output_events_t out_events = { p, out_try_push };
@@ -275,7 +290,8 @@ void clap_host_process(ClapPlugin *p,
   };
 
   p->plugin->process(p->plugin, &proc);
-  p->event_count = 0;  // consumed
+  p->event_count = 0;
+  p->param_event_count = 0;
 
   if (out_l)
     memcpy(out_l, p->buf_out_l, frames * sizeof(float));
@@ -285,3 +301,54 @@ void clap_host_process(ClapPlugin *p,
 
 bool clap_host_is_instrument(ClapPlugin *p) { return p && p->is_instrument; }
 const char *clap_host_name(ClapPlugin *p) { return p ? p->name : ""; }
+
+uint32_t clap_host_param_count(ClapPlugin *p) {
+  if (!p || !p->params_ext) return 0;
+  return p->params_ext->count(p->plugin);
+}
+
+bool clap_host_param_flags(ClapPlugin *p, uint32_t idx, uint32_t *out_flags) {
+  if (!p || !p->params_ext) return false;
+  clap_param_info_t info;
+  if (!p->params_ext->get_info(p->plugin, idx, &info)) return false;
+  if (out_flags) *out_flags = (uint32_t)info.flags;
+  return true;
+}
+
+bool clap_host_param_is_stepped(ClapPlugin *p, uint32_t idx) {
+  if (!p || !p->params_ext) return false;
+  clap_param_info_t info;
+  if (!p->params_ext->get_info(p->plugin, idx, &info)) return false;
+  return (info.flags & CLAP_PARAM_IS_STEPPED) != 0;
+}
+
+bool clap_host_param_info(ClapPlugin *p, uint32_t idx,
+                          uint32_t *out_id, char *out_name, size_t name_sz,
+                          double *out_min, double *out_max, double *out_default) {
+  if (!p || !p->params_ext) return false;
+  clap_param_info_t info;
+  if (!p->params_ext->get_info(p->plugin, idx, &info)) return false;
+  if (out_id)      *out_id      = (uint32_t)info.id;
+  if (out_name)    snprintf(out_name, name_sz, "%s", info.name);
+  if (out_min)     *out_min     = info.min_value;
+  if (out_max)     *out_max     = info.max_value;
+  if (out_default) *out_default = info.default_value;
+  return true;
+}
+
+void clap_host_queue_param(ClapPlugin *p, uint32_t param_id, double value) {
+  if (!p || p->param_event_count >= 16) return;
+  clap_event_param_value_t *ev = &p->param_events[p->param_event_count++];
+  memset(ev, 0, sizeof(*ev));
+  ev->header.size     = sizeof(*ev);
+  ev->header.time     = 0;
+  ev->header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+  ev->header.type     = CLAP_EVENT_PARAM_VALUE;
+  ev->header.flags    = 0;
+  ev->param_id        = (clap_id)param_id;
+  ev->value           = value;
+  ev->note_id         = -1;
+  ev->port_index      = -1;
+  ev->channel         = -1;
+  ev->key             = -1;
+}

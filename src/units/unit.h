@@ -24,6 +24,24 @@ typedef struct {
   const char * const *param_enums[UNIT_MAX_PARAMS];
   uint8_t             param_enum_count[UNIT_MAX_PARAMS];
 
+  // Optional: dynamic param count/name (for plugins with variable params like CLAP)
+  int (*dyn_num_params)(UnitState *s);
+  const char *(*dyn_param_name)(UnitState *s, int idx);
+  uint8_t (*get_param_val)(UnitState *s, int idx);
+  void    (*set_param_val)(UnitState *s, int idx, uint8_t val);
+  uint8_t (*get_param_default)(UnitState *s, int idx);
+  // Encode current param values back into slot->data (call after set_param_val)
+  void    (*sync_to_data)(UnitState *s, char *data_buf, size_t data_buf_sz);
+  // Return display string for a param value; NULL = use default %02X hex display.
+  // "ON"/"OFF" → boolean toggle display (no bar). Any other string → stepped int display.
+  const char *(*format_param_val)(UnitState *s, int idx, uint8_t val);
+
+  // Param picker (for units like CLAP where user manually maps params)
+  int          (*picker_count)(UnitState *s);                // total params available to pick
+  const char  *(*picker_name)(UnitState *s, int picker_idx); // name of picker entry
+  void         (*picker_add)(UnitState *s, int picker_idx);  // add picker entry as next mapping
+  void         (*mapping_remove)(UnitState *s, int map_idx); // remove a mapped param
+
   UnitState *(*create)(float sample_rate);
   void (*destroy)(UnitState *s);
 
