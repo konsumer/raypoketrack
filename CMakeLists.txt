@@ -94,9 +94,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 if(NOT EMSCRIPTEN)
     target_include_directories(${PROJECT_NAME} PRIVATE ${clap_SOURCE_DIR}/include)
-    if(WIN32)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE WIN32_LEAN_AND_MEAN)
-    endif()
 endif()
 
 if(EMSCRIPTEN)
