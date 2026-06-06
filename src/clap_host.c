@@ -6,6 +6,7 @@
 
 // Platform shared-library loading
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #define DL_OPEN(p) LoadLibraryA(p)
 #define DL_SYM(h, s) GetProcAddress((HMODULE)(h), s)
@@ -251,40 +252,26 @@ void clap_host_process(ClapPlugin *p,
   const float *in_bufs[2] = {in_l, in_r};
   float *out_bufs[2] = {p->buf_out_l, p->buf_out_r};
 
-  clap_audio_buffer_t audio_in = {
-      .data32 = (float **)in_bufs,
-      .channel_count = 2,
-      .latency = 0,
-      .constant_mask = 0,
-  };
-  clap_audio_buffer_t audio_out = {
-      .data32 = out_bufs,
-      .channel_count = 2,
-      .latency = 0,
-      .constant_mask = 0,
-  };
+  // clap_audio_buffer_t: data32, data64, channel_count, latency, constant_mask
+  clap_audio_buffer_t audio_in  = { (float **)in_bufs, NULL, 2, 0, 0 };
+  clap_audio_buffer_t audio_out = { out_bufs,           NULL, 2, 0, 0 };
 
-  // Build event list
+  // clap_input_events_t: ctx, size, get
   clap_input_events_t in_events = {
-      .ctx = p,
-      .size = list_size,
-      .get = (const clap_event_header_t *(*)(const clap_input_events_t *, uint32_t))list_get,
+      p, list_size,
+      (const clap_event_header_t *(CLAP_ABI *)(const clap_input_events_t *, uint32_t))list_get,
   };
-  clap_output_events_t out_events = {
-      .ctx = p,
-      .try_push = out_try_push,
-  };
+  // clap_output_events_t: ctx, try_push
+  clap_output_events_t out_events = { p, out_try_push };
 
+  // clap_process_t: steady_time, frames_count, transport,
+  //   audio_inputs, audio_outputs, audio_inputs_count, audio_outputs_count,
+  //   in_events, out_events
   clap_process_t proc = {
-      .steady_time = -1,
-      .frames_count = frames,
-      .transport = NULL,
-      .audio_inputs = in_l ? &audio_in : NULL,
-      .audio_outputs = &audio_out,
-      .audio_inputs_count = in_l ? 1 : 0,
-      .audio_outputs_count = 1,
-      .in_events = &in_events,
-      .out_events = &out_events,
+      -1, frames, NULL,
+      in_l ? &audio_in : NULL, &audio_out,
+      in_l ? 1u : 0u, 1u,
+      &in_events, &out_events,
   };
 
   p->plugin->process(p->plugin, &proc);

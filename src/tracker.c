@@ -162,7 +162,11 @@ static void ensure_parent_dir(const char *file_path) {
     char dir[512];
     save_dir_of(file_path, dir, sizeof(dir));
     if (dir[0] && !(dir[0] == '.' && dir[1] == '/'))
+#ifdef _WIN32
+        mkdir(dir);
+#else
         mkdir(dir, 0755);
+#endif
 }
 
 bool tracker_save(const TrackerSong *song, const char *path) {
